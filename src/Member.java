@@ -4,7 +4,7 @@ public class Member {
     public String firstName;
     public String lastName;
     public String id;
-    public int level; //1=undergrad, 2=master/postgrad, 3=phd, 4=teacher
+    public int level; //1=undergrad, 2=master, 3=phd, 4=teacher
     public int borrowedCount;
     public int lateReturnCount;
     public int suspensionCount;
@@ -25,7 +25,7 @@ public class Member {
 
     public int maxLoans() {
         if (level == 1) return 3;   //undergrad
-        if (level == 2) return 5;   //master/postgrad
+        if (level == 2) return 5;   //master
         if (level == 3) return 7;   //phd
         if (level == 4) return 10;  //teacher
         return 0; //unknown type

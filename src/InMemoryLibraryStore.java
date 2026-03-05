@@ -1,51 +1,59 @@
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 
 public class InMemoryLibraryStore implements ILibraryStore {
 
-    private final HashMap<String, Book> books = new HashMap<>();
-    private final HashMap<String, Member> members = new HashMap<>();
+    private List<Book> books = new ArrayList<>();
+    private List<Member> members = new ArrayList<>();
 
     @Override
     public void addBook(Book newBook) {
-        if (newBook == null || newBook.ISBN == null) return;
-        books.put(newBook.ISBN, newBook);
+        books.add(newBook);
     }
 
     @Override
     public void addMember(Member newMember) {
-        if (newMember == null || newMember.id == null) return;
-        members.put(newMember.id, newMember);
+        members.add(newMember);
     }
 
     @Override
     public Book getBook(String id) {
-        return books.get(id);
+        for (Book b : books) {
+            if (b.ISBN.equals(id)) {
+                return b;
+            }
+        }
+        return null;
     }
 
     @Override
     public Member getMember(String id) {
-        return members.get(id);
+        for (Member m : members) {
+            if (m.id.equals(id)) {
+                return m;
+            }
+        }
+        return null;
     }
 
     @Override
     public boolean isSuspendedMember(String id) {
-        Member m = members.get(id);
+        Member m = getMember(id);
         if (m == null) return false;
-        // If service calls this, it should pass "today". But interface doesn't.
-        // We'll interpret: suspended if suspendedUntil != null
         return m.suspendedUntil != null;
     }
 
     @Override
     public void removeMember(String id) {
-        members.remove(id);
+        members.removeIf(m -> m.id.equals(id));
     }
 
     @Override
     public void suspendMember(String id) {
-        Member m = members.get(id);
-        if (m == null) return;
-        // Service should set suspendedUntil properly later. Keep this minimal.
-        m.suspendedUntil = new java.util.Date();
+        Member m = getMember(id);
+        if (m != null) {
+            m.suspendedUntil = new java.util.Date();
+            m.suspensionCount++;
+        }
     }
 }
