@@ -4,7 +4,7 @@ public class Main {
 
     public static void main(String[] args) {
 
-        // ILibraryStore store = new FileLibraryStore("myfilename.txt");
+        //ILibraryStore store = new FileLibraryStore("myfilename.txt");
         ILibraryStore store = new InMemoryLibraryStore(); //InMemoryLibraryStore ist för DbLibraryStore (tog bort/ändrade från ILibraryStore store = new DbLibraryStore());
         seedData(store);
 
