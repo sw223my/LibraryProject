@@ -32,17 +32,16 @@ public class Member {
     }
 
     public boolean isSuspended(Date today) {
-        if (suspendedUntil == null)
+        if (suspendedUntil == null) {
             return false;
-        return today.before(suspendedUntil);
+        }
+        if (today.before(suspendedUntil)) {
+            return true;
+        }
+        return false;
     }
 
     public boolean canBorrow() {
         return borrowedCount < maxLoans();
-    }
-
-    public String fullName() {
-        String ln = (lastName == null) ? "" : (" " + lastName);
-        return (firstName == null ? "" : firstName) + ln;
     }
 }

@@ -24,14 +24,10 @@ public class Loan {
     }
 
     public boolean isLate(Date today) {
-        if (dueDate == null) return false;
-
         if (returnDate == null) {
-            //Not returned –> jämför today med due date
-            return today.after(dueDate);
+            return today.after(dueDate); //Not returned –> jämför today med due date
         } else {
-            //Returned –> jämför return date med due date
-            return returnDate.after(dueDate);
+            return returnDate.after(dueDate); //Returned –> jämför return date med due date
         }
     }
 }
