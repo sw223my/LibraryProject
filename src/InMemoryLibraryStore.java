@@ -1,9 +1,12 @@
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public class InMemoryLibraryStore implements ILibraryStore {
 
     private final HashMap<String, Book> books = new HashMap<>();
     private final HashMap<String, Member> members = new HashMap<>();
+    private final List<Loan> loans = new ArrayList<>();
 
     @Override
     public void addBook(Book newBook) {
@@ -31,8 +34,6 @@ public class InMemoryLibraryStore implements ILibraryStore {
     public boolean isSuspendedMember(String id) {
         Member m = members.get(id);
         if (m == null) return false;
-        // If service calls this, it should pass "today". But interface doesn't.
-        // We'll interpret: suspended if suspendedUntil != null
         return m.suspendedUntil != null;
     }
 
@@ -45,7 +46,36 @@ public class InMemoryLibraryStore implements ILibraryStore {
     public void suspendMember(String id) {
         Member m = members.get(id);
         if (m == null) return;
-        // Service should set suspendedUntil properly later. Keep this minimal.
         m.suspendedUntil = new java.util.Date();
+    }
+
+    @Override
+    public void addLoan(Loan loan) {
+        if (loan != null) {
+            loans.add(loan);
+        }
+    }
+
+    @Override
+    public Loan getActiveLoan(String memberId, String isbn) {
+        for (Loan loan : loans) {
+            if (loan.memberId.equals(memberId)
+                    && loan.isbn.equals(isbn)
+                    && loan.isActive()) {
+                return loan;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public List<Loan> getLoansForMember(String memberId) {
+        List<Loan> result = new ArrayList<>();
+        for (Loan loan : loans) {
+            if (loan.memberId.equals(memberId)) {
+                result.add(loan);
+            }
+        }
+        return result;
     }
 }

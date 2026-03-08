@@ -45,9 +45,8 @@ public class Main {
                     System.out.print("Enter book ISBN: ");
                     String bookId = scanner.nextLine();
 
-                    // If your service method is named returnBook/returnItem, change this call.
-                    // For now we just show a placeholder to avoid compile errors.
-                    System.out.println("Return not implemented yet.");
+                    boolean ok = svc.returnBook(bookId, userId);
+                    System.out.println(ok ? "Book returned." : "Could not return book.");
                     break;
                 }
 
