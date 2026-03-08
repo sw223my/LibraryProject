@@ -1,3 +1,5 @@
+import java.util.ArrayList;
+import java.util.List;
 
 public class FileLibraryStore implements ILibraryStore {
 
@@ -47,6 +49,20 @@ public class FileLibraryStore implements ILibraryStore {
     public void suspendMember(String id) {
         // TODO Auto-generated method stub
 
+    }
+
+    @Override
+    public void addLoan(Loan loan) {
+    }
+
+    @Override
+    public Loan getActiveLoan(String memberId, String isbn) {
+        return null;
+    }
+
+    @Override
+    public List<Loan> getLoansForMember(String memberId) {
+        return new ArrayList<>();
     }
 
 }

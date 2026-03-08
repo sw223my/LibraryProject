@@ -1,3 +1,5 @@
+import java.util.ArrayList;
+import java.util.List;
 
 public class DbLibraryStore implements ILibraryStore {
 
@@ -35,5 +37,19 @@ public class DbLibraryStore implements ILibraryStore {
 
     @Override
     public void suspendMember(String id) {
+    }
+
+    @Override
+    public void addLoan(Loan loan) {
+    }
+
+    @Override
+    public Loan getActiveLoan(String memberId, String isbn) {
+        return null;
+    }
+
+    @Override
+    public List<Loan> getLoansForMember(String memberId) {
+        return new ArrayList<>();
     }
 }

@@ -4,25 +4,16 @@ public class Main {
 
     public static void main(String[] args) {
 
-        //ILibraryStore store = new FileLibraryStore("myfilename.txt");
+        // ILibraryStore store = new FileLibraryStore("myfilename.txt");
         ILibraryStore store = new InMemoryLibraryStore(); //InMemoryLibraryStore ist för DbLibraryStore (tog bort/ändrade från ILibraryStore store = new DbLibraryStore());
-        seedData(store); //exempeldata
+        seedData(store);
 
         LibraryService svc = new LibraryService(store);
         Scanner scanner = new Scanner(System.in);
 
         System.out.println("Welcome to the Library System!");
-        System.out.println("Testanvändare: 4128, 5001, 7001, 9001");
         System.out.print("Enter your user id: ");
         String userId = scanner.nextLine();
-
-        Member m = store.getMember(userId);
-        if (m == null) {
-            System.out.println("Okänd användare. Testa t.ex. 4128.");
-            scanner.close();
-            return;
-        }
-        System.out.println("Hej " + m.firstName + "!");
 
         boolean done = false;
 
@@ -30,40 +21,36 @@ public class Main {
             System.out.println("\nMenu:");
             System.out.println("1. Lend item");
             System.out.println("2. Return item");
-            System.out.println("3. Check loan time");
-            System.out.println("4. Exit");
-            System.out.print("Select (1-4): ");
+            System.out.println("9. Quit");
+            System.out.print("Select (1-9): ");
 
             int selection;
-                try {
-                    selection = Integer.parseInt(scanner.nextLine());
-                } catch (NumberFormatException e) {
-                    System.out.println("Please enter a number.");
-                    continue;
-                }
+            try {
+                selection = Integer.parseInt(scanner.nextLine());
+            } catch (NumberFormatException e) {
+                System.out.println("Please enter a number.");
+                continue;
+            }
 
             switch (selection) {
                 case 1: {
                     System.out.print("Enter book ISBN: ");
                     String bookId = scanner.nextLine();
 
-                    svc.borrow(bookId, userId);
+                    svc.borrow(userId, bookId);
                     break;
                 }
 
                 case 2: {
                     System.out.print("Enter book ISBN: ");
                     String bookId = scanner.nextLine();
-                    System.out.println("Book is returned...(inte implementerad än)");
+
+                    boolean ok = svc.returnBook(bookId, userId);
+                    System.out.println(ok ? "Book returned." : "Could not return book.");
                     break;
                 }
 
-                case 3: {
-                    System.out.println("Loan time... (inte implementerad än)");
-                    break;
-                }
-
-                case 4: {
+                case 9: {
                     done = true;
                     break;
                 }
@@ -73,12 +60,12 @@ public class Main {
             }
         }
 
-        System.out.println("Bye!");
+        System.out.println("Bye.");
         scanner.close();
     }
 
     private static void seedData(ILibraryStore store) {
-        //10 books (exempeldata)
+        //exempeldata (10 books)
         store.addBook(new Book("238103", "Clean Code", "Robert C. Martin", 2008, 2));
         store.addBook(new Book("111111", "Refactoring", "Martin Fowler", 1999, 1));
         store.addBook(new Book("222222", "Effective Java", "Joshua Bloch", 2018, 2));
