@@ -5,42 +5,42 @@ public class DbLibraryStore implements ILibraryStore {
 
     @Override
     public void addBook(Book newBook) {
-        // SQL code here
+        // SQL here later
+    }
+
+    @Override
+    public Book getBook(String isbn) {
+        return null;
+    }
+
+    @Override
+    public void removeBook(String isbn) {
+        // SQL here later
     }
 
     @Override
     public void addMember(Member newMember) {
+        // SQL here later
     }
 
     @Override
-    public Book getBook(String id) {
-        // SQL code here
-        System.out.println("DbLibraryStore::getBook()");
-        return new Book();
+    public Member getMember(String memberId) {
+        return null;
     }
 
     @Override
-    public Member getMember(String id) {
-        System.out.println("DbLibraryStore::getMember()");
-        return new Member();
+    public Member getMemberByPersonalNumber(String personalNumber) {
+        return null;
     }
 
     @Override
-    public boolean isSuspendedMember(String id) {
-
-        return false;
-    }
-
-    @Override
-    public void removeMember(String id) {
-    }
-
-    @Override
-    public void suspendMember(String id) {
+    public void removeMember(String memberId) {
+        // SQL here later
     }
 
     @Override
     public void addLoan(Loan loan) {
+        // SQL here later
     }
 
     @Override
@@ -50,6 +50,11 @@ public class DbLibraryStore implements ILibraryStore {
 
     @Override
     public List<Loan> getLoansForMember(String memberId) {
+        return new ArrayList<>();
+    }
+
+    @Override
+    public List<Loan> getLoansForBook(String isbn) {
         return new ArrayList<>();
     }
 }
