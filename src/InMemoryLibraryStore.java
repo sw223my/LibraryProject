@@ -10,43 +10,48 @@ public class InMemoryLibraryStore implements ILibraryStore {
 
     @Override
     public void addBook(Book newBook) {
-        if (newBook == null || newBook.ISBN == null) return;
+        if (newBook == null || newBook.ISBN == null || newBook.ISBN.isBlank()) {
+            return;
+        }
         books.put(newBook.ISBN, newBook);
     }
 
     @Override
+    public Book getBook(String isbn) {
+        return books.get(isbn);
+    }
+
+    @Override
+    public void removeBook(String isbn) {
+        books.remove(isbn);
+    }
+
+    @Override
     public void addMember(Member newMember) {
-        if (newMember == null || newMember.id == null) return;
+        if (newMember == null || newMember.id == null || newMember.id.isBlank()) {
+            return;
+        }
         members.put(newMember.id, newMember);
     }
 
     @Override
-    public Book getBook(String id) {
-        return books.get(id);
+    public Member getMember(String memberId) {
+        return members.get(memberId);
     }
 
     @Override
-    public Member getMember(String id) {
-        return members.get(id);
+    public Member getMemberByPersonalNumber(String personalNumber) {
+        for (Member member : members.values()) {
+            if (member.personalNumber != null && member.personalNumber.equals(personalNumber)) {
+                return member;
+            }
+        }
+        return null;
     }
 
     @Override
-    public boolean isSuspendedMember(String id) {
-        Member m = members.get(id);
-        if (m == null) return false;
-        return m.suspendedUntil != null;
-    }
-
-    @Override
-    public void removeMember(String id) {
-        members.remove(id);
-    }
-
-    @Override
-    public void suspendMember(String id) {
-        Member m = members.get(id);
-        if (m == null) return;
-        m.suspendedUntil = new java.util.Date();
+    public void removeMember(String memberId) {
+        members.remove(memberId);
     }
 
     @Override
@@ -73,6 +78,17 @@ public class InMemoryLibraryStore implements ILibraryStore {
         List<Loan> result = new ArrayList<>();
         for (Loan loan : loans) {
             if (loan.memberId.equals(memberId)) {
+                result.add(loan);
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public List<Loan> getLoansForBook(String isbn) {
+        List<Loan> result = new ArrayList<>();
+        for (Loan loan : loans) {
+            if (loan.isbn.equals(isbn)) {
                 result.add(loan);
             }
         }

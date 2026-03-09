@@ -6,9 +6,9 @@ public class Loan {
     public String isbn;
     public Date loanDate;
     public Date dueDate;
-    public Date returnDate; //null=not returned yet
+    public Date returnDate; // null = not returned yet
 
-    public Loan() {} //konstruktor
+    public Loan() {}
 
     public Loan(int loanId, String memberId, String isbn, Date loanDate, Date dueDate) {
         this.loanId = loanId;
@@ -24,10 +24,12 @@ public class Loan {
     }
 
     public boolean isLate(Date today) {
+        if (dueDate == null) return false;
+
         if (returnDate == null) {
-            return today.after(dueDate); //Not returned –> jämför today med due date
+            return today.after(dueDate);
         } else {
-            return returnDate.after(dueDate); //Returned –> jämför return date med due date
+            return returnDate.after(dueDate);
         }
     }
 }
