@@ -4,7 +4,7 @@ public class Member {
     public String firstName;
     public String lastName;
     public String id;              // library member id, e.g. 4128
-    public String personalNumber;  // personnummer / personal number
+    public String personalNumber;
     public int level;              // 1=undergrad, 2=postgrad, 3=phd, 4=teacher
 
     public int borrowedCount;
