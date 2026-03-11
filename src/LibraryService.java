@@ -1,7 +1,7 @@
 import java.util.Date;
 import java.util.List;
 
-public class LibraryService {
+public class LibraryService implements ILibraryService {
 
     private final ILibraryStore store;
     private int nextLoanId = 1;
@@ -212,7 +212,7 @@ public class LibraryService {
         throw new IllegalStateException("No free member IDs available.");
     }
 
-    public static class ReturnResult {
+    public class ReturnResult {
         public final boolean success;
         public final boolean late;
         public final Date suspendedUntil;
