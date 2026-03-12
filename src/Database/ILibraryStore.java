@@ -1,4 +1,7 @@
+package Database;
+
 import java.util.List;
+import Processing.*;
 
 public interface ILibraryStore {
     void addBook(Book newBook);

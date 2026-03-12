@@ -1,6 +1,10 @@
+package Ui;
+
 import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Scanner;
+import Processing.*;
+import Database.*;
 
 public class Main {
 
@@ -98,11 +102,11 @@ public class Main {
             Book book = svc.getBook(isbn);
             Member member = svc.getMember(memberId);
 
-            System.out.println("Loan successful.");
-            System.out.println("Member: " + member.fullName() + " (" + member.id + ")");
-            System.out.println("Book: " + book.title);
+            System.out.println("Processing.Loan successful.");
+            System.out.println("Processing.Member: " + member.fullName() + " (" + member.id + ")");
+            System.out.println("Processing.Book: " + book.title);
             System.out.println("ISBN: " + book.ISBN);
-            System.out.println("Loan period: 15 days");
+            System.out.println("Processing.Loan period: 15 days");
         } else {
             System.out.println("Could not lend book. Check member status, loan limit, ISBN, or availability.");
         }
@@ -122,19 +126,19 @@ public class Main {
             return;
         }
 
-        System.out.println("Book returned successfully.");
+        System.out.println("Processing.Book returned successfully.");
 
         if (!result.late) {
             System.out.println("Returned in time. Thank you.");
         } else {
-            System.out.println("Book was returned late.");
+            System.out.println("Processing.Book was returned late.");
 
             if (result.suspendedUntil != null) {
-                System.out.println("Member suspended until: " + DATE_FORMAT.format(result.suspendedUntil));
+                System.out.println("Processing.Member suspended until: " + DATE_FORMAT.format(result.suspendedUntil));
             }
 
             if (result.memberDeleted) {
-                System.out.println("Member account deleted because suspension count exceeded 2.");
+                System.out.println("Processing.Member account deleted because suspension count exceeded 2.");
             }
         }
     }
@@ -145,7 +149,7 @@ public class Main {
 
         Member member = svc.getMember(memberId);
         if (member == null) {
-            System.out.println("Member not found.");
+            System.out.println("Processing.Member not found.");
             return;
         }
 
@@ -163,10 +167,10 @@ public class Main {
             String title = (book == null) ? "Unknown title" : book.title;
 
             System.out.println("---------------------------------");
-            System.out.println("Loan ID: " + loan.loanId);
-            System.out.println("Book: " + title);
+            System.out.println("Processing.Loan ID: " + loan.loanId);
+            System.out.println("Processing.Book: " + title);
             System.out.println("ISBN: " + loan.isbn);
-            System.out.println("Loan date: " + DATE_FORMAT.format(loan.loanDate));
+            System.out.println("Processing.Loan date: " + DATE_FORMAT.format(loan.loanDate));
             System.out.println("Due date: " + DATE_FORMAT.format(loan.dueDate));
             System.out.println("Status: " + (loan.isActive() ? "Active" : "Returned"));
             if (loan.returnDate != null) {
@@ -181,7 +185,7 @@ public class Main {
 
         Book book = svc.getBook(isbn);
         if (book == null) {
-            System.out.println("Book not found.");
+            System.out.println("Processing.Book not found.");
             return;
         }
 
@@ -212,7 +216,7 @@ public class Main {
             int copies = Integer.parseInt(scanner.nextLine());
 
             svc.addBookTitle(isbn, title, author, year, copies);
-            System.out.println("Book added.");
+            System.out.println("Processing.Book added.");
         } catch (Exception e) {
             System.out.println("Could not add book: " + e.getMessage());
         }
@@ -223,7 +227,7 @@ public class Main {
         String isbn = scanner.nextLine();
 
         boolean ok = svc.deleteBook(isbn);
-        System.out.println(ok ? "Book deleted." : "Could not delete book. It may not exist or still have active loans.");
+        System.out.println(ok ? "Processing.Book deleted." : "Could not delete book. It may not exist or still have active loans.");
     }
 
     private static void handleRegisterMember(Scanner scanner, LibraryService svc) {
@@ -241,7 +245,7 @@ public class Main {
             int level = Integer.parseInt(scanner.nextLine());
 
             String memberId = svc.registerMember(firstName, lastName, personalNumber, level);
-            System.out.println("Member registered or already exists. Member ID: " + memberId);
+            System.out.println("Processing.Member registered or already exists. Processing.Member ID: " + memberId);
         } catch (Exception e) {
             System.out.println("Could not register member: " + e.getMessage());
         }
@@ -252,7 +256,7 @@ public class Main {
         String memberId = scanner.nextLine();
 
         boolean ok = svc.deleteMember(memberId);
-        System.out.println(ok ? "Member deleted." : "Could not delete member. Member may not exist or still has active loans.");
+        System.out.println(ok ? "Processing.Member deleted." : "Could not delete member. Processing.Member may not exist or still has active loans.");
     }
 
     private static void handleSuspendMember(Scanner scanner, LibraryService svc) {
@@ -269,7 +273,7 @@ public class Main {
         }
 
         boolean ok = svc.suspendMember(memberId, days);
-        System.out.println(ok ? "Member suspended." : "Could not suspend member.");
+        System.out.println(ok ? "Processing.Member suspended." : "Could not suspend member.");
     }
 
     private static void seedData(ILibraryStore store) {

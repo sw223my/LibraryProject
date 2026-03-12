@@ -1,6 +1,9 @@
+package Database;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import Processing.*;
 
 public class InMemoryLibraryStore implements ILibraryStore {
 

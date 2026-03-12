@@ -1,5 +1,8 @@
+package Processing;
+
 import java.util.Date;
 import java.util.List;
+import Database.*;
 
 public class LibraryService {
 
@@ -142,12 +145,12 @@ public class LibraryService {
     public ReturnResult returnBook(String memberId, String isbn) {
         Member member = store.getMember(memberId);
         if (member == null) {
-            return new ReturnResult(false, false, null, false, "Member not found.");
+            return new ReturnResult(false, false, null, false, "Processing.Member not found.");
         }
 
         Book book = store.getBook(isbn);
         if (book == null) {
-            return new ReturnResult(false, false, null, false, "Book not found.");
+            return new ReturnResult(false, false, null, false, "Processing.Book not found.");
         }
 
         Loan loan = store.getActiveLoan(memberId, isbn);
