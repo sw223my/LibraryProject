@@ -20,6 +20,14 @@ public class InMemoryLibraryStore implements ILibraryStore {
     }
 
     @Override
+    public void updateBook(Book book) {
+        if (book == null || book.ISBN == null || book.ISBN.isBlank()) {
+            return;
+        }
+        books.put(book.ISBN, book);
+    }
+
+    @Override
     public Book getBook(String isbn) {
         return books.get(isbn);
     }
@@ -35,6 +43,14 @@ public class InMemoryLibraryStore implements ILibraryStore {
             return;
         }
         members.put(newMember.id, newMember);
+    }
+
+    @Override
+    public void updateMember(Member member) {
+        if (member == null || member.id == null || member.id.isBlank()) {
+            return;
+        }
+        members.put(member.id, member);
     }
 
     @Override
@@ -62,6 +78,11 @@ public class InMemoryLibraryStore implements ILibraryStore {
         if (loan != null) {
             loans.add(loan);
         }
+    }
+
+    @Override
+    public void updateLoan(Loan loan) {
+        // behövs inte nu
     }
 
     @Override

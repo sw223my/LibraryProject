@@ -12,6 +12,11 @@ public class DbLibraryStore implements ILibraryStore {
     }
 
     @Override
+    public void updateBook(Book book) {
+        // SQL here later
+    }
+
+    @Override
     public Book getBook(String isbn) {
         return null;
     }
@@ -23,6 +28,11 @@ public class DbLibraryStore implements ILibraryStore {
 
     @Override
     public void addMember(Member newMember) {
+        // SQL here later
+    }
+
+    @Override
+    public void updateMember(Member member) {
         // SQL here later
     }
 
@@ -43,6 +53,11 @@ public class DbLibraryStore implements ILibraryStore {
 
     @Override
     public void addLoan(Loan loan) {
+        // SQL here later
+    }
+
+    @Override
+    public void updateLoan(Loan loan) {
         // SQL here later
     }
 

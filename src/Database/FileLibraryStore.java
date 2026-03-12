@@ -17,6 +17,10 @@ public class FileLibraryStore implements ILibraryStore {
     }
 
     @Override
+    public void updateBook(Book book) {
+    }
+
+    @Override
     public Book getBook(String isbn) {
         return null;
     }
@@ -27,6 +31,10 @@ public class FileLibraryStore implements ILibraryStore {
 
     @Override
     public void addMember(Member newMember) {
+    }
+
+    @Override
+    public void updateMember(Member member) {
     }
 
     @Override
@@ -45,6 +53,10 @@ public class FileLibraryStore implements ILibraryStore {
 
     @Override
     public void addLoan(Loan loan) {
+    }
+
+    @Override
+    public void updateLoan(Loan loan) {
     }
 
     @Override
