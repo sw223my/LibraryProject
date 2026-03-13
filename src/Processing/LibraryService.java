@@ -1,4 +1,14 @@
 package Processing;
+
+import Database.ILibraryStore;
+import Objects.BookCopy;
+import Objects.BookTitle;
+import Objects.Loan;
+import Objects.MemberType;
+import Objects.Membership;
+import Objects.Person;
+import Objects.Suspension;
+
 import java.util.Date;
 import java.util.List;
 
@@ -138,6 +148,10 @@ public class LibraryService {
         }
 
         MemberType memberType = store.getMemberType(membership.memberTypeId);
+        if (memberType == null) {
+            return false;
+        }
+
         List<Loan> currentLoans = store.getLoansForMember(memberId);
 
         int activeLoans = 0;

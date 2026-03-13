@@ -1,5 +1,13 @@
 package Database;
 
+import Objects.BookCopy;
+import Objects.BookTitle;
+import Objects.Loan;
+import Objects.MemberType;
+import Objects.Membership;
+import Objects.Person;
+import Objects.Suspension;
+
 import java.util.List;
 
 public interface ILibraryStore {

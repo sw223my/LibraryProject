@@ -1,19 +1,23 @@
 package Processing;
 
+import Objects.BookTitle;
+import Objects.Loan;
+import Objects.Membership;
+
 import java.util.List;
 
 public interface ILibraryService {
     void addBookTitle(String isbn, String title, String author, int year, int copies);
-    boolean deleteBook(String isbn);
+    boolean deleteBookTitle(String isbn);
 
-    String registerMember(String firstName, String lastName, String personalNumber, int level);
-    boolean suspendMember(String memberId, int days);
-    boolean deleteMember(String memberId);
+    String registerMember(String firstName, String lastName, String personalNumber, int memberTypeId);
+    boolean suspendMember(int memberId, int days);
+    boolean deleteMember(int memberId);
 
-    boolean lendBook(String memberId, String isbn);
-    LibraryService.ReturnResult returnBook(String memberId, String isbn);
+    boolean lendBook(int memberId, String isbn);
+    LibraryService.ReturnResult returnBook(int memberId, String isbn);
 
-    List<Loan> getLoansForMember(String memberId);
-    Book getBook(String isbn);
-    Member getMember(String memberId);
+    List<Loan> getLoansForMember(int memberId);
+    BookTitle getBookTitle(String isbn);
+    Membership getMembership(int memberId);
 }
