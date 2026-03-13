@@ -8,15 +8,26 @@ import Objects.Membership;
 import Objects.Person;
 import Objects.Suspension;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
 public class DbLibraryStore implements ILibraryStore {
 
-    private final String connectionString;
+    private final String url;
+    private final String user;
+    private final String password;
 
-    public DbLibraryStore(String connectionString) {
-        this.connectionString = connectionString;
+    public DbLibraryStore(String url, String user, String password) {
+        this.url = url;
+        this.user = user;
+        this.password = password;
+    }
+
+    private Connection getConnection() throws SQLException {
+        return DriverManager.getConnection(url, user, password);
     }
 
     @Override

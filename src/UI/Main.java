@@ -1,7 +1,7 @@
 package UI;
 
+import Database.DbLibraryStore;
 import Database.ILibraryStore;
-import Database.InMemoryLibraryStore;
 import Objects.BookCopy;
 import Objects.BookTitle;
 import Objects.Loan;
@@ -17,9 +17,11 @@ public class Main {
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
 
     public static void main(String[] args) {
-        ILibraryStore store = new InMemoryLibraryStore();
-        seedData(store);
+        String url = "jdbc:mysql://localhost:3306/library_system?sslMode=DISABLED&serverTimezone=UTC";
+        String user = "root";
+        String password = "Fotboll_0533!";
 
+        ILibraryStore store = new DbLibraryStore(url, user, password);
         LibraryService svc = new LibraryService(store);
         Scanner scanner = new Scanner(System.in);
 
@@ -90,9 +92,13 @@ public class Main {
             Membership membership = svc.getMembership(memberId);
 
             System.out.println("Loan successful.");
-            System.out.println("Member ID: " + membership.memberId);
-            System.out.println("Book: " + book.title);
-            System.out.println("ISBN: " + book.isbn);
+            if (membership != null) {
+                System.out.println("Member ID: " + membership.memberId);
+            }
+            if (book != null) {
+                System.out.println("Book: " + book.title);
+                System.out.println("ISBN: " + book.isbn);
+            }
             System.out.println("Loan period: 15 days");
         } else {
             System.out.println("Could not lend book. Check member status, loan limit, ISBN, or availability.");
@@ -287,62 +293,23 @@ public class Main {
     }
 
     private static String findIsbnForCopy(ILibraryStore store, int copyId) {
-        for (BookTitle title : List.of(
-                store.getBookTitle("238103"),
-                store.getBookTitle("111111"),
-                store.getBookTitle("222222"),
-                store.getBookTitle("333333"),
-                store.getBookTitle("444444"),
-                store.getBookTitle("555555"),
-                store.getBookTitle("666666"),
-                store.getBookTitle("777777"),
-                store.getBookTitle("888888"),
-                store.getBookTitle("999999")
-        )) {
+        String[] knownIsbns = {
+                "238103", "111111", "222222", "333333", "444444",
+                "555555", "666666", "777777", "888888", "999999"
+        };
+
+        for (String isbn : knownIsbns) {
+            BookTitle title = store.getBookTitle(isbn);
             if (title == null) {
                 continue;
             }
-            for (BookCopy copy : store.getBookCopies(title.isbn)) {
+
+            for (BookCopy copy : store.getBookCopies(isbn)) {
                 if (copy.copyId == copyId) {
                     return copy.isbn;
                 }
             }
         }
         return null;
-    }
-
-    private static void seedData(ILibraryStore store) {
-        store.addBookTitle(new BookTitle("238103", "Clean Code", "Robert C. Martin", 2008));
-        store.addBookCopies("238103", 2);
-        store.addBookTitle(new BookTitle("111111", "Refactoring", "Martin Fowler", 1999));
-        store.addBookCopies("111111", 1);
-        store.addBookTitle(new BookTitle("222222", "Effective Java", "Joshua Bloch", 2018));
-        store.addBookCopies("222222", 2);
-        store.addBookTitle(new BookTitle("333333", "Design Patterns", "GoF", 1994));
-        store.addBookCopies("333333", 1);
-        store.addBookTitle(new BookTitle("444444", "The Pragmatic Programmer", "Hunt & Thomas", 1999));
-        store.addBookCopies("444444", 2);
-        store.addBookTitle(new BookTitle("555555", "Introduction to Algorithms", "CLRS", 2009));
-        store.addBookCopies("555555", 1);
-        store.addBookTitle(new BookTitle("666666", "JUnit in Action", "Petar Tahchiev", 2010));
-        store.addBookCopies("666666", 1);
-        store.addBookTitle(new BookTitle("777777", "Mockito Cookbook", "Sam Edwards", 2015));
-        store.addBookCopies("777777", 1);
-        store.addBookTitle(new BookTitle("888888", "Java Concurrency in Practice", "Goetz", 2006));
-        store.addBookCopies("888888", 1);
-        store.addBookTitle(new BookTitle("999999", "Head First Design Patterns", "Freeman", 2004));
-        store.addBookCopies("999999", 2);
-
-        store.addPerson(new Objects.Person("19990101-1111", "Lisa", "Student"));
-        store.addMembership(new Membership(4128, "19990101-1111", 1, null, "ACTIVE", 0, 0));
-
-        store.addPerson(new Objects.Person("19980202-2222", "Adam", "Master"));
-        store.addMembership(new Membership(5001, "19980202-2222", 2, null, "ACTIVE", 0, 0));
-
-        store.addPerson(new Objects.Person("19970303-3333", "Daniel", "PhD"));
-        store.addMembership(new Membership(7001, "19970303-3333", 3, null, "ACTIVE", 0, 0));
-
-        store.addPerson(new Objects.Person("19850404-4444", "Eva", "Teacher"));
-        store.addMembership(new Membership(9001, "19850404-4444", 4, null, "ACTIVE", 0, 0));
     }
 }
