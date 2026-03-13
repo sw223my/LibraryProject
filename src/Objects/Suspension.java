@@ -8,14 +8,12 @@ public class Suspension {
     public int memberId;
     public Date startDate;
     public Date endDate;
-    public String reason;
 
-    public Suspension(int suspensionId, int memberId, Date startDate, Date endDate, String reason) {
+    public Suspension(int suspensionId, int memberId, Date startDate, Date endDate) {
         this.suspensionId = suspensionId;
         this.memberId = memberId;
         this.startDate = startDate;
         this.endDate = endDate;
-        this.reason = reason;
     }
 
     @Override
@@ -25,7 +23,6 @@ public class Suspension {
                 ", memberId=" + memberId +
                 ", startDate=" + startDate +
                 ", endDate=" + endDate +
-                ", reason='" + reason + '\'' +
                 '}';
     }
 
@@ -35,12 +32,11 @@ public class Suspension {
         return suspensionId == other.suspensionId &&
                 memberId == other.memberId &&
                 Objects.equals(startDate, other.startDate) &&
-                Objects.equals(endDate, other.endDate) &&
-                Objects.equals(reason, other.reason);
+                Objects.equals(endDate, other.endDate);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(suspensionId, memberId, startDate, endDate, reason);
+        return Objects.hash(suspensionId, memberId, startDate, endDate);
     }
 }
