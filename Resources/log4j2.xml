@@ -3,7 +3,7 @@
 	<Appenders>
 		<File name="MyFile" fileName="logs/library.log" append="true">
 			<PatternLayout>
-				<Pattern>%d{yyyy-MM-dd HH:mm:ss,SSS} %-5level %c [%t] %m%n</Pattern>
+				<Pattern>%d{yyyy-MM-dd HH:mm:ss,SSS} %-5level %logger [%t] %m%n</Pattern>
 			</PatternLayout>
 		</File>
 	</Appenders>
