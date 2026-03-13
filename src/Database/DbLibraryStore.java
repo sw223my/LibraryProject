@@ -7,6 +7,8 @@ import Objects.MemberType;
 import Objects.Membership;
 import Objects.Person;
 import Objects.Suspension;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.sql.Connection;
 import java.sql.Date;
@@ -21,6 +23,7 @@ import java.util.List;
 
 public class DbLibraryStore implements ILibraryStore {
 
+    private static final Logger logger = LogManager.getLogger(DbLibraryStore.class);
     private final String url;
     private final String user;
     private final String password;
@@ -32,6 +35,7 @@ public class DbLibraryStore implements ILibraryStore {
     }
 
     private Connection getConnection() throws SQLException {
+        logger.debug("Opening database connection to {}", url);
         return DriverManager.getConnection(url, user, password);
     }
 
@@ -60,6 +64,7 @@ public class DbLibraryStore implements ILibraryStore {
 
             stmt.executeUpdate();
         } catch (SQLException e) {
+            logger.error("Could not add book title.", e);
             throw new RuntimeException("Could not add book title.", e);
         }
     }
@@ -89,6 +94,7 @@ public class DbLibraryStore implements ILibraryStore {
                 return null;
             }
         } catch (SQLException e) {
+            logger.error("Could not fetch book title.", e);
             throw new RuntimeException("Could not fetch book title.", e);
         }
     }
@@ -106,6 +112,7 @@ public class DbLibraryStore implements ILibraryStore {
             stmt.setString(1, isbn);
             stmt.executeUpdate();
         } catch (SQLException e) {
+            logger.error("Could not remove book title.", e);
             throw new RuntimeException("Could not remove book title.", e);
         }
     }
@@ -128,6 +135,7 @@ public class DbLibraryStore implements ILibraryStore {
 
             stmt.executeBatch();
         } catch (SQLException e) {
+            logger.error("Could not add book copies.", e);
             throw new RuntimeException("Could not add book copies.", e);
         }
     }
@@ -160,6 +168,7 @@ public class DbLibraryStore implements ILibraryStore {
 
             return copies;
         } catch (SQLException e) {
+            logger.error("Could not fetch book copies.", e);
             throw new RuntimeException("Could not fetch book copies.", e);
         }
     }
@@ -187,6 +196,7 @@ public class DbLibraryStore implements ILibraryStore {
                 return null;
             }
         } catch (SQLException e) {
+            logger.error("Could not fetch book copy.", e);
             throw new RuntimeException("Could not fetch book copy.", e);
         }
     }
@@ -217,6 +227,7 @@ public class DbLibraryStore implements ILibraryStore {
                 return null;
             }
         } catch (SQLException e) {
+            logger.error("Could not fetch available book copy.", e);
             throw new RuntimeException("Could not fetch available book copy.", e);
         }
     }
@@ -238,6 +249,7 @@ public class DbLibraryStore implements ILibraryStore {
 
             stmt.executeUpdate();
         } catch (SQLException e) {
+            logger.error("Could not update book copy.", e);
             throw new RuntimeException("Could not update book copy.", e);
         }
     }
@@ -255,6 +267,7 @@ public class DbLibraryStore implements ILibraryStore {
             stmt.setString(1, isbn);
             stmt.executeUpdate();
         } catch (SQLException e) {
+            logger.error("Could not remove book copies.", e);
             throw new RuntimeException("Could not remove book copies.", e);
         }
     }
@@ -275,6 +288,7 @@ public class DbLibraryStore implements ILibraryStore {
 
             stmt.executeUpdate();
         } catch (SQLException e) {
+            logger.error("Could not add person.", e);
             throw new RuntimeException("Could not add person.", e);
         }
     }
@@ -303,12 +317,14 @@ public class DbLibraryStore implements ILibraryStore {
                 return null;
             }
         } catch (SQLException e) {
+            logger.error("Could not fetch person.", e);
             throw new RuntimeException("Could not fetch person.", e);
         }
     }
 
     @Override
     public void addMembership(Membership membership) {
+        logger.info("Saving membership. personalNumber={}, memberTypeId={}", membership.personalNumber, membership.memberTypeId);
         String sql = """
                 INSERT INTO membership (
                     personal_number,
@@ -336,9 +352,11 @@ public class DbLibraryStore implements ILibraryStore {
             try (ResultSet keys = stmt.getGeneratedKeys()) {
                 if (keys.next()) {
                     membership.memberId = keys.getInt(1);
+                    logger.info("Membership saved successfully. memberId={}", membership.memberId);
                 }
             }
         } catch (SQLException e) {
+            logger.error("Could not add membership.", e);
             throw new RuntimeException("Could not add membership.", e);
         }
     }
@@ -378,6 +396,7 @@ public class DbLibraryStore implements ILibraryStore {
                 return null;
             }
         } catch (SQLException e) {
+            logger.error("Could not fetch membership.", e);
             throw new RuntimeException("Could not fetch membership.", e);
         }
     }
@@ -417,12 +436,14 @@ public class DbLibraryStore implements ILibraryStore {
                 return null;
             }
         } catch (SQLException e) {
+            logger.error("Could not fetch membership by personal number.", e);
             throw new RuntimeException("Could not fetch membership by personal number.", e);
         }
     }
 
     @Override
     public void updateMembership(Membership membership) {
+        logger.info("Updating membership. memberId={}, status={}", membership.memberId, membership.status);
         String sql = """
                 UPDATE membership
                 SET personal_number = ?,
@@ -447,12 +468,14 @@ public class DbLibraryStore implements ILibraryStore {
 
             stmt.executeUpdate();
         } catch (SQLException e) {
+            logger.error("Could not update membership.", e);
             throw new RuntimeException("Could not update membership.", e);
         }
     }
 
     @Override
     public void removeMembership(int memberId) {
+        logger.info("Removing membership. memberId={}", memberId);
         String sql = """
                 DELETE FROM membership
                 WHERE member_id = ?
@@ -464,6 +487,7 @@ public class DbLibraryStore implements ILibraryStore {
             stmt.setInt(1, memberId);
             stmt.executeUpdate();
         } catch (SQLException e) {
+            logger.error("Could not remove membership.", e);
             throw new RuntimeException("Could not remove membership.", e);
         }
     }
@@ -492,6 +516,7 @@ public class DbLibraryStore implements ILibraryStore {
                 return null;
             }
         } catch (SQLException e) {
+            logger.error("Could not fetch member type.", e);
             throw new RuntimeException("Could not fetch member type.", e);
         }
     }
@@ -520,12 +545,14 @@ public class DbLibraryStore implements ILibraryStore {
 
             return types;
         } catch (SQLException e) {
+            logger.error("Could not fetch member types.", e);
             throw new RuntimeException("Could not fetch member types.", e);
         }
     }
 
     @Override
     public void addLoan(Loan loan) {
+        logger.info("Saving loan. memberId={}, copyId={}", loan.memberId, loan.copyId);
         String sql = """
                 INSERT INTO loan (
                     member_id,
@@ -551,15 +578,18 @@ public class DbLibraryStore implements ILibraryStore {
             try (ResultSet keys = stmt.getGeneratedKeys()) {
                 if (keys.next()) {
                     loan.loanId = keys.getInt(1);
+                    logger.info("Loan saved successfully. loanId={}", loan.loanId);
                 }
             }
         } catch (SQLException e) {
+            logger.error("Could not add loan.", e);
             throw new RuntimeException("Could not add loan.", e);
         }
     }
 
     @Override
     public void updateLoan(Loan loan) {
+        logger.info("Updating loan. loanId={}, memberId={}, copyId={}", loan.loanId, loan.memberId, loan.copyId);
         String sql = """
                 UPDATE loan
                 SET member_id = ?,
@@ -582,6 +612,7 @@ public class DbLibraryStore implements ILibraryStore {
 
             stmt.executeUpdate();
         } catch (SQLException e) {
+            logger.error("Could not update loan.", e);
             throw new RuntimeException("Could not update loan.", e);
         }
     }
@@ -624,6 +655,7 @@ public class DbLibraryStore implements ILibraryStore {
                 return null;
             }
         } catch (SQLException e) {
+            logger.error("Could not fetch active loan.", e);
             throw new RuntimeException("Could not fetch active loan.", e);
         }
     }
@@ -659,6 +691,7 @@ public class DbLibraryStore implements ILibraryStore {
 
             return loans;
         } catch (SQLException e) {
+            logger.error("Could not fetch loans for member.", e);
             throw new RuntimeException("Could not fetch loans for member.", e);
         }
     }
@@ -701,12 +734,14 @@ public class DbLibraryStore implements ILibraryStore {
 
             return loans;
         } catch (SQLException e) {
+            logger.error("Could not fetch loans for book.", e);
             throw new RuntimeException("Could not fetch loans for book.", e);
         }
     }
 
     @Override
     public void addSuspension(Suspension suspension) {
+        logger.info("Saving suspension. memberId={}", suspension.memberId);
         String sql = """
                 INSERT INTO suspension (
                     member_id,
@@ -728,9 +763,11 @@ public class DbLibraryStore implements ILibraryStore {
             try (ResultSet keys = stmt.getGeneratedKeys()) {
                 if (keys.next()) {
                     suspension.suspensionId = keys.getInt(1);
+                    logger.info("Suspension saved successfully. suspensionId={}", suspension.suspensionId);
                 }
             }
         } catch (SQLException e) {
+            logger.error("Could not add suspension.", e);
             throw new RuntimeException("Could not add suspension.", e);
         }
     }
@@ -764,6 +801,7 @@ public class DbLibraryStore implements ILibraryStore {
 
             return suspensions;
         } catch (SQLException e) {
+            logger.error("Could not fetch suspensions for member.", e);
             throw new RuntimeException("Could not fetch suspensions for member.", e);
         }
     }

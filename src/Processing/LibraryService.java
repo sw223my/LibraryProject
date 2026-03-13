@@ -8,12 +8,15 @@ import Objects.MemberType;
 import Objects.Membership;
 import Objects.Person;
 import Objects.Suspension;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.Date;
 import java.util.List;
 
 public class LibraryService implements ILibraryService {
 
+    private static final Logger logger = LogManager.getLogger(LibraryService.class);
     private final ILibraryStore store;
 
     public LibraryService(ILibraryStore store) {
@@ -21,6 +24,7 @@ public class LibraryService implements ILibraryService {
     }
 
     public void addBookTitle(String isbn, String title, String author, int publishYear, int copies) {
+        logger.info("Add book title requested. isbn={}, title={}, copies={}", isbn, title, copies);
         if (isbn == null || isbn.isBlank()) {
             throw new IllegalArgumentException("ISBN is required.");
         }
@@ -32,33 +36,40 @@ public class LibraryService implements ILibraryService {
         }
 
         if (store.getBookTitle(isbn) != null) {
+            logger.warn("Add book title denied: ISBN already exists. isbn={}", isbn);
             throw new IllegalArgumentException("A book title with this ISBN already exists.");
         }
 
         BookTitle bookTitle = new BookTitle(isbn, title, author, publishYear);
         store.addBookTitle(bookTitle);
         store.addBookCopies(isbn, copies);
+        logger.info("Book title added successfully. isbn={}, copies={}", isbn, copies);
     }
 
     public boolean deleteBookTitle(String isbn) {
+        logger.info("Delete book title requested. isbn={}", isbn);
         BookTitle bookTitle = store.getBookTitle(isbn);
         if (bookTitle == null) {
+            logger.warn("Delete book title denied: book not found. isbn={}", isbn);
             return false;
         }
 
         List<Loan> loans = store.getLoansForBook(isbn);
         for (Loan loan : loans) {
             if (loan.isActive()) {
+                logger.warn("Delete book title denied: active loans exist. isbn={}", isbn);
                 return false;
             }
         }
 
         store.removeBookCopiesByIsbn(isbn);
         store.removeBookTitle(isbn);
+        logger.info("Book title deleted successfully. isbn={}", isbn);
         return true;
     }
 
     public String registerMember(String firstName, String lastName, String personalNumber, int memberTypeId) {
+        logger.info("Register member requested. personalNumber={}, memberTypeId={}", personalNumber, memberTypeId);
         if (firstName == null || firstName.isBlank()) {
             throw new IllegalArgumentException("First name is required.");
         }
@@ -71,6 +82,7 @@ public class LibraryService implements ILibraryService {
 
         Membership existingMembership = store.getMembershipByPersonalNumber(personalNumber);
         if (existingMembership != null) {
+            logger.info("Register member skipped: existing membership found. personalNumber={}, memberId={}", personalNumber, existingMembership.memberId);
             return String.valueOf(existingMembership.memberId);
         }
 
@@ -90,13 +102,16 @@ public class LibraryService implements ILibraryService {
         );
 
         store.addMembership(membership);
+        logger.info("Member registered successfully. personalNumber={}, memberId={}", personalNumber, membership.memberId);
 
         return String.valueOf(membership.memberId);
     }
 
     public boolean suspendMember(int memberId, int days) {
+        logger.info("Suspend member requested. memberId={}, days={}", memberId, days);
         Membership membership = store.getMembership(memberId);
         if (membership == null || days <= 0) {
+            logger.warn("Suspend member denied. memberId={}, days={}", memberId, days);
             return false;
         }
 
@@ -109,45 +124,55 @@ public class LibraryService implements ILibraryService {
 
         store.updateMembership(membership);
         store.addSuspension(new Suspension(0, memberId, today, endDate));
+        logger.info("Member suspended successfully. memberId={}, suspendedUntil={}", memberId, endDate);
         return true;
     }
 
     public boolean deleteMember(int memberId) {
+        logger.info("Delete member requested. memberId={}", memberId);
         Membership membership = store.getMembership(memberId);
         if (membership == null) {
+            logger.warn("Delete member denied: member not found. memberId={}", memberId);
             return false;
         }
 
         List<Loan> loans = store.getLoansForMember(memberId);
         for (Loan loan : loans) {
             if (loan.isActive()) {
+                logger.warn("Delete member denied: active loans exist. memberId={}", memberId);
                 return false;
             }
         }
 
         store.removeMembership(memberId);
+        logger.info("Member deleted successfully. memberId={}", memberId);
         return true;
     }
 
     public boolean lendBook(int memberId, String isbn) {
+        logger.info("Lend request received. memberId={}, isbn={}", memberId, isbn);
         Membership membership = store.getMembership(memberId);
         if (membership == null) {
+            logger.warn("Lend denied: member not found. memberId={}", memberId);
             return false;
         }
 
         BookTitle bookTitle = store.getBookTitle(isbn);
         if (bookTitle == null) {
+            logger.warn("Lend denied: book not found. isbn={}", isbn);
             return false;
         }
 
         Date today = new Date();
 
         if (membership.isSuspended(today)) {
+            logger.warn("Lend denied: member is suspended. memberId={}", memberId);
             return false;
         }
 
         MemberType memberType = store.getMemberType(membership.memberTypeId);
         if (memberType == null) {
+            logger.error("Lend failed: member type not found. memberId={}, memberTypeId={}", memberId, membership.memberTypeId);
             return false;
         }
 
@@ -161,15 +186,18 @@ public class LibraryService implements ILibraryService {
         }
 
         if (activeLoans >= memberType.maxLoans) {
+            logger.warn("Lend denied: loan limit reached. memberId={}, activeLoans={}, maxLoans={}", memberId, activeLoans, memberType.maxLoans);
             return false;
         }
 
         if (store.getActiveLoan(memberId, isbn) != null) {
+            logger.warn("Lend denied: member already has this book on loan. memberId={}, isbn={}", memberId, isbn);
             return false;
         }
 
         BookCopy copy = store.getAvailableBookCopy(isbn);
         if (copy == null) {
+            logger.warn("Lend denied: no available copy. isbn={}", isbn);
             return false;
         }
 
@@ -186,22 +214,27 @@ public class LibraryService implements ILibraryService {
         );
 
         store.addLoan(loan);
+        logger.info("Loan created successfully. memberId={}, isbn={}, copyId={}, loanId={}", memberId, isbn, copy.copyId, loan.loanId);
         return true;
     }
 
     public ReturnResult returnBook(int memberId, String isbn) {
+        logger.info("Return request received. memberId={}, isbn={}", memberId, isbn);
         Membership membership = store.getMembership(memberId);
         if (membership == null) {
+            logger.warn("Return denied: member not found. memberId={}", memberId);
             return new ReturnResult(false, false, null, false, "Member not found.");
         }
 
         BookTitle bookTitle = store.getBookTitle(isbn);
         if (bookTitle == null) {
+            logger.warn("Return denied: book not found. isbn={}", isbn);
             return new ReturnResult(false, false, null, false, "Book not found.");
         }
 
         Loan loan = store.getActiveLoan(memberId, isbn);
         if (loan == null) {
+            logger.warn("Return denied: no active loan found. memberId={}, isbn={}", memberId, isbn);
             return new ReturnResult(false, false, null, false, "No active loan found.");
         }
 
@@ -220,6 +253,8 @@ public class LibraryService implements ILibraryService {
         if (returnedCopy != null) {
             returnedCopy.status = "AVAILABLE";
             store.updateBookCopy(returnedCopy);
+        } else {
+            logger.warn("Returned loan copy could not be found in catalog. loanId={}, copyId={}", loan.loanId, loan.copyId);
         }
 
         boolean wasLate = today.after(loan.dueDate);
@@ -228,6 +263,8 @@ public class LibraryService implements ILibraryService {
 
         if (wasLate) {
             membership.lateReturnCount++;
+
+            logger.warn("Late return registered. memberId={}, isbn={}, lateReturnCount={}", memberId, isbn, membership.lateReturnCount);
 
             if (membership.lateReturnCount > 2) {
                 suspendedUntil = addDays(today, 15);
@@ -238,9 +275,11 @@ public class LibraryService implements ILibraryService {
                 store.addSuspension(new Suspension(
                         0, memberId, today, suspendedUntil
                 ));
+                logger.warn("Member suspended after repeated late returns. memberId={}, suspendedUntil={}", memberId, suspendedUntil);
 
                 if (membership.suspensionCount > 2) {
                     memberDeleted = deleteMember(memberId);
+                    logger.warn("Member exceeded suspension limit. memberId={}, deleted={}", memberId, memberDeleted);
                 } else {
                     store.updateMembership(membership);
                 }
@@ -249,6 +288,7 @@ public class LibraryService implements ILibraryService {
             }
         }
 
+        logger.info("Return completed. memberId={}, isbn={}, late={}, memberDeleted={}", memberId, isbn, wasLate, memberDeleted);
         return new ReturnResult(true, wasLate, suspendedUntil, memberDeleted, "Return completed.");
     }
 
