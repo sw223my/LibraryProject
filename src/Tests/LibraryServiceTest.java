@@ -1,12 +1,18 @@
 package Tests;
 
 import Database.ILibraryStore;
-import Processing.*;
+import Objects.BookCopy;
+import Objects.BookTitle;
+import Objects.Loan;
+import Objects.MemberType;
+import Objects.Membership;
+import Objects.Person;
+import Objects.Suspension;
+import Processing.LibraryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -25,6 +31,8 @@ public class LibraryServiceTest {
         service = new LibraryService(store);
     }
 
+    // ---------- addBookTitle ----------
+
     @Test
     void addBookTitle_shouldThrow_whenIsbnIsBlank() {
         IllegalArgumentException ex = assertThrows(
@@ -33,7 +41,8 @@ public class LibraryServiceTest {
         );
 
         assertEquals("ISBN is required.", ex.getMessage());
-        verify(store, never()).addBook(any());
+        verify(store, never()).addBookTitle(any());
+        verify(store, never()).addBookCopies(anyString(), anyInt());
     }
 
     @Test
@@ -44,92 +53,102 @@ public class LibraryServiceTest {
         );
 
         assertEquals("Title is required.", ex.getMessage());
-        verify(store, never()).addBook(any());
+        verify(store, never()).addBookTitle(any());
+        verify(store, never()).addBookCopies(anyString(), anyInt());
     }
 
     @Test
-    void addBookTitle_shouldThrow_whenCopiesIsInvalid() {
+    void addBookTitle_shouldThrow_whenCopiesInvalid() {
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
                 () -> service.addBookTitle("123", "Title", "Author", 2020, 0)
         );
 
         assertEquals("Copies must be at least 1.", ex.getMessage());
-        verify(store, never()).addBook(any());
+        verify(store, never()).addBookTitle(any());
+        verify(store, never()).addBookCopies(anyString(), anyInt());
     }
 
     @Test
-    void addBookTitle_shouldThrow_whenBookAlreadyExists() {
-        when(store.getBook("123")).thenReturn(new Book("123", "Old", "Author", 2020, 1));
+    void addBookTitle_shouldThrow_whenBookTitleAlreadyExists() {
+        when(store.getBookTitle("123"))
+                .thenReturn(new BookTitle("123", "Old", "Author", 2020));
 
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
                 () -> service.addBookTitle("123", "New", "Author", 2024, 2)
         );
 
-        assertEquals("A book with this ISBN already exists.", ex.getMessage());
-        verify(store, never()).addBook(any());
+        assertEquals("A book title with this ISBN already exists.", ex.getMessage());
+        verify(store, never()).addBookTitle(any());
+        verify(store, never()).addBookCopies(anyString(), anyInt());
     }
 
     @Test
-    void addBookTitle_shouldAddBook_whenValid() {
-        when(store.getBook("123")).thenReturn(null);
+    void addBookTitle_shouldAddBookTitleAndCopies_whenValid() {
+        when(store.getBookTitle("123")).thenReturn(null);
 
         service.addBookTitle("123", "Clean Code", "Robert Martin", 2008, 3);
 
-        ArgumentCaptor<Book> captor = ArgumentCaptor.forClass(Book.class);
-        verify(store).addBook(captor.capture());
+        ArgumentCaptor<BookTitle> captor = ArgumentCaptor.forClass(BookTitle.class);
+        verify(store).addBookTitle(captor.capture());
+        verify(store).addBookCopies("123", 3);
 
-        Book added = captor.getValue();
-        assertEquals("123", added.ISBN);
+        BookTitle added = captor.getValue();
+        assertEquals("123", added.isbn);
         assertEquals("Clean Code", added.title);
         assertEquals("Robert Martin", added.author);
-        assertEquals(2008, added.year);
-        assertEquals(3, added.totalCopies);
-        assertEquals(3, added.availableCopies);
+        assertEquals(2008, added.publishYear);
     }
 
-    @Test
-    void deleteBook_shouldReturnFalse_whenBookDoesNotExist() {
-        when(store.getBook("123")).thenReturn(null);
+    // ---------- deleteBookTitle ----------
 
-        boolean result = service.deleteBook("123");
+    @Test
+    void deleteBookTitle_shouldReturnFalse_whenBookDoesNotExist() {
+        when(store.getBookTitle("123")).thenReturn(null);
+
+        boolean result = service.deleteBookTitle("123");
 
         assertFalse(result);
-        verify(store, never()).removeBook(anyString());
+        verify(store, never()).removeBookCopiesByIsbn(anyString());
+        verify(store, never()).removeBookTitle(anyString());
     }
 
     @Test
-    void deleteBook_shouldReturnFalse_whenActiveLoanExists() {
-        Book book = new Book("123", "Java", "Author", 2020, 2);
+    void deleteBookTitle_shouldReturnFalse_whenActiveLoanExists() {
+        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
         Loan activeLoan = mock(Loan.class);
 
-        when(store.getBook("123")).thenReturn(book);
+        when(store.getBookTitle("123")).thenReturn(title);
         when(store.getLoansForBook("123")).thenReturn(List.of(activeLoan));
         when(activeLoan.isActive()).thenReturn(true);
 
-        boolean result = service.deleteBook("123");
+        boolean result = service.deleteBookTitle("123");
 
         assertFalse(result);
-        verify(store, never()).removeBook("123");
+        verify(store, never()).removeBookCopiesByIsbn("123");
+        verify(store, never()).removeBookTitle("123");
     }
 
     @Test
-    void deleteBook_shouldRemoveBook_whenNoActiveLoansExist() {
-        Book book = new Book("123", "Java", "Author", 2020, 2);
+    void deleteBookTitle_shouldRemoveBookTitleAndCopies_whenNoActiveLoansExist() {
+        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
         Loan loan1 = mock(Loan.class);
         Loan loan2 = mock(Loan.class);
 
-        when(store.getBook("123")).thenReturn(book);
-        when(store.getLoansForBook("123")).thenReturn(Arrays.asList(loan1, loan2));
+        when(store.getBookTitle("123")).thenReturn(title);
+        when(store.getLoansForBook("123")).thenReturn(List.of(loan1, loan2));
         when(loan1.isActive()).thenReturn(false);
         when(loan2.isActive()).thenReturn(false);
 
-        boolean result = service.deleteBook("123");
+        boolean result = service.deleteBookTitle("123");
 
         assertTrue(result);
-        verify(store).removeBook("123");
+        verify(store).removeBookCopiesByIsbn("123");
+        verify(store).removeBookTitle("123");
     }
+
+    // ---------- registerMember ----------
 
     @Test
     void registerMember_shouldThrow_whenFirstNameBlank() {
@@ -162,164 +181,192 @@ public class LibraryServiceTest {
     }
 
     @Test
-    void registerMember_shouldThrow_whenLevelInvalid() {
-        IllegalArgumentException ex = assertThrows(
-                IllegalArgumentException.class,
-                () -> service.registerMember("John", "Doe", "19900101-1234", 5)
-        );
-
-        assertEquals("Level must be 1-4.", ex.getMessage());
-    }
-
-    @Test
     void registerMember_shouldReturnExistingId_whenAlreadyRegistered() {
-        Member existing = new Member("1001", "John", "Doe", "19900101-1234", 1);
-        when(store.getMemberByPersonalNumber("19900101-1234")).thenReturn(existing);
+        Membership existing = new Membership(1001, "19900101-1234", 1, null, "ACTIVE", 0, 0);
+        when(store.getMembershipByPersonalNumber("19900101-1234")).thenReturn(existing);
 
         String result = service.registerMember("John", "Doe", "19900101-1234", 1);
 
         assertEquals("1001", result);
-        verify(store, never()).addMember(any());
+        verify(store, never()).addPerson(any());
+        verify(store, never()).addMembership(any());
     }
 
     @Test
-    void registerMember_shouldCreateNewMember_whenNotExisting() {
-        when(store.getMemberByPersonalNumber("19900101-1234")).thenReturn(null);
-        when(store.getMember("1000")).thenReturn(null);
+    void registerMember_shouldCreatePersonAndMembership_whenNotExisting() {
+        when(store.getMembershipByPersonalNumber("19900101-1234")).thenReturn(null);
+        when(store.getMembership(1000)).thenReturn(null);
 
         String result = service.registerMember("John", "Doe", "19900101-1234", 2);
 
         assertEquals("1000", result);
 
-        ArgumentCaptor<Member> captor = ArgumentCaptor.forClass(Member.class);
-        verify(store).addMember(captor.capture());
+        ArgumentCaptor<Person> personCaptor = ArgumentCaptor.forClass(Person.class);
+        ArgumentCaptor<Membership> membershipCaptor = ArgumentCaptor.forClass(Membership.class);
 
-        Member added = captor.getValue();
-        assertEquals("1000", added.id);
-        assertEquals("John", added.firstName);
-        assertEquals("Doe", added.lastName);
-        assertEquals("19900101-1234", added.personalNumber);
-        assertEquals(2, added.level);
+        verify(store).addPerson(personCaptor.capture());
+        verify(store).addMembership(membershipCaptor.capture());
+
+        Person person = personCaptor.getValue();
+        assertEquals("19900101-1234", person.personalNumber);
+        assertEquals("John", person.firstName);
+        assertEquals("Doe", person.lastName);
+
+        Membership membership = membershipCaptor.getValue();
+        assertEquals(1000, membership.memberId);
+        assertEquals("19900101-1234", membership.personalNumber);
+        assertEquals(2, membership.memberTypeId);
+        assertEquals("ACTIVE", membership.status);
+        assertEquals(0, membership.lateReturnCount);
+        assertEquals(0, membership.suspensionCount);
+        assertNull(membership.suspendedUntil);
     }
+
+    // ---------- suspendMember ----------
 
     @Test
     void suspendMember_shouldReturnFalse_whenMemberDoesNotExist() {
-        when(store.getMember("1000")).thenReturn(null);
+        when(store.getMembership(1000)).thenReturn(null);
 
-        boolean result = service.suspendMember("1000", 10);
+        boolean result = service.suspendMember(1000, 10);
 
         assertFalse(result);
+        verify(store, never()).updateMembership(any());
+        verify(store, never()).addSuspension(any());
     }
 
     @Test
     void suspendMember_shouldReturnFalse_whenDaysInvalid() {
-        Member member = new Member("1000", "John", "Doe", "19900101-1234", 1);
-        when(store.getMember("1000")).thenReturn(member);
+        Membership membership = new Membership(1000, "19900101-1234", 1, null, "ACTIVE", 0, 0);
+        when(store.getMembership(1000)).thenReturn(membership);
 
-        boolean result = service.suspendMember("1000", 0);
+        boolean result = service.suspendMember(1000, 0);
 
         assertFalse(result);
+        verify(store, never()).updateMembership(any());
+        verify(store, never()).addSuspension(any());
     }
 
     @Test
-    void suspendMember_shouldSetSuspendedUntil_whenValid() {
-        Member member = new Member("1000", "John", "Doe", "19900101-1234", 1);
-        when(store.getMember("1000")).thenReturn(member);
+    void suspendMember_shouldUpdateMembershipAndAddSuspension_whenValid() {
+        Membership membership = new Membership(1000, "19900101-1234", 1, null, "ACTIVE", 0, 0);
+        when(store.getMembership(1000)).thenReturn(membership);
 
-        boolean result = service.suspendMember("1000", 10);
+        boolean result = service.suspendMember(1000, 10);
 
         assertTrue(result);
-        assertNotNull(member.suspendedUntil);
-        assertTrue(member.suspendedUntil.after(new Date(System.currentTimeMillis() + 8L * 24 * 60 * 60 * 1000)));
+        assertNotNull(membership.suspendedUntil);
+        assertEquals("SUSPENDED", membership.status);
+        assertEquals(1, membership.suspensionCount);
+
+        verify(store).updateMembership(membership);
+
+        ArgumentCaptor<Suspension> captor = ArgumentCaptor.forClass(Suspension.class);
+        verify(store).addSuspension(captor.capture());
+
+        Suspension suspension = captor.getValue();
+        assertEquals(1000, suspension.memberId);
+        assertEquals("Manual suspension", suspension.reason);
+        assertNotNull(suspension.startDate);
+        assertNotNull(suspension.endDate);
     }
+
+    // ---------- deleteMember ----------
 
     @Test
     void deleteMember_shouldReturnFalse_whenMemberDoesNotExist() {
-        when(store.getMember("1000")).thenReturn(null);
+        when(store.getMembership(1000)).thenReturn(null);
 
-        boolean result = service.deleteMember("1000");
+        boolean result = service.deleteMember(1000);
 
         assertFalse(result);
-        verify(store, never()).removeMember(anyString());
+        verify(store, never()).removeMembership(anyInt());
     }
 
     @Test
     void deleteMember_shouldReturnFalse_whenActiveLoanExists() {
-        Member member = new Member("1000", "John", "Doe", "19900101-1234", 1);
+        Membership membership = new Membership(1000, "19900101-1234", 1, null, "ACTIVE", 0, 0);
         Loan activeLoan = mock(Loan.class);
 
-        when(store.getMember("1000")).thenReturn(member);
-        when(store.getLoansForMember("1000")).thenReturn(List.of(activeLoan));
+        when(store.getMembership(1000)).thenReturn(membership);
+        when(store.getLoansForMember(1000)).thenReturn(List.of(activeLoan));
         when(activeLoan.isActive()).thenReturn(true);
 
-        boolean result = service.deleteMember("1000");
+        boolean result = service.deleteMember(1000);
 
         assertFalse(result);
-        verify(store, never()).removeMember("1000");
+        verify(store, never()).removeMembership(1000);
     }
 
     @Test
-    void deleteMember_shouldRemoveMember_whenNoActiveLoans() {
-        Member member = new Member("1000", "John", "Doe", "19900101-1234", 1);
+    void deleteMember_shouldRemoveMembership_whenNoActiveLoans() {
+        Membership membership = new Membership(1000, "19900101-1234", 1, null, "ACTIVE", 0, 0);
         Loan loan = mock(Loan.class);
 
-        when(store.getMember("1000")).thenReturn(member);
-        when(store.getLoansForMember("1000")).thenReturn(List.of(loan));
+        when(store.getMembership(1000)).thenReturn(membership);
+        when(store.getLoansForMember(1000)).thenReturn(List.of(loan));
         when(loan.isActive()).thenReturn(false);
 
-        boolean result = service.deleteMember("1000");
+        boolean result = service.deleteMember(1000);
 
         assertTrue(result);
-        verify(store).removeMember("1000");
+        verify(store).removeMembership(1000);
     }
+
+    // ---------- lendBook ----------
 
     @Test
     void lendBook_shouldReturnFalse_whenMemberNotFound() {
-        when(store.getMember("1000")).thenReturn(null);
+        when(store.getMembership(1000)).thenReturn(null);
 
-        boolean result = service.lendBook("1000", "123");
-
-        assertFalse(result);
-        verify(store, never()).addLoan(any());
-    }
-
-    @Test
-    void lendBook_shouldReturnFalse_whenBookNotFound() {
-        when(store.getMember("1000")).thenReturn(new Member("1000", "John", "Doe", "19900101-1234", 1));
-        when(store.getBook("123")).thenReturn(null);
-
-        boolean result = service.lendBook("1000", "123");
+        boolean result = service.lendBook(1000, "123");
 
         assertFalse(result);
         verify(store, never()).addLoan(any());
     }
 
     @Test
-    void lendBook_shouldReturnFalse_whenMemberCannotBorrow() {
-        Member member = mock(Member.class);
-        Book book = new Book("123", "Java", "Author", 2020, 2);
+    void lendBook_shouldReturnFalse_whenBookTitleNotFound() {
+        Membership membership = new Membership(1000, "19900101-1234", 1, null, "ACTIVE", 0, 0);
 
-        when(store.getMember("1000")).thenReturn(member);
-        when(store.getBook("123")).thenReturn(book);
-        when(member.canBorrow(any(Date.class))).thenReturn(false);
+        when(store.getMembership(1000)).thenReturn(membership);
+        when(store.getBookTitle("123")).thenReturn(null);
 
-        boolean result = service.lendBook("1000", "123");
+        boolean result = service.lendBook(1000, "123");
 
         assertFalse(result);
         verify(store, never()).addLoan(any());
     }
 
     @Test
-    void lendBook_shouldReturnFalse_whenBookNotAvailable() {
-        Member member = mock(Member.class);
-        Book book = mock(Book.class);
+    void lendBook_shouldReturnFalse_whenMemberIsSuspended() {
+        Date tomorrow = new Date(System.currentTimeMillis() + 24L * 60 * 60 * 1000);
+        Membership membership = new Membership(1000, "19900101-1234", 1, tomorrow, "SUSPENDED", 0, 1);
+        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
 
-        when(store.getMember("1000")).thenReturn(member);
-        when(store.getBook("123")).thenReturn(book);
-        when(member.canBorrow(any(Date.class))).thenReturn(true);
-        when(book.isAvailable()).thenReturn(false);
+        when(store.getMembership(1000)).thenReturn(membership);
+        when(store.getBookTitle("123")).thenReturn(title);
 
-        boolean result = service.lendBook("1000", "123");
+        boolean result = service.lendBook(1000, "123");
+
+        assertFalse(result);
+        verify(store, never()).addLoan(any());
+    }
+
+    @Test
+    void lendBook_shouldReturnFalse_whenLoanLimitReached() {
+        Membership membership = new Membership(1000, "19900101-1234", 1, null, "ACTIVE", 0, 0);
+        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
+        MemberType type = new MemberType(1, "Student", 1);
+        Loan activeLoan = mock(Loan.class);
+
+        when(store.getMembership(1000)).thenReturn(membership);
+        when(store.getBookTitle("123")).thenReturn(title);
+        when(store.getMemberType(1)).thenReturn(type);
+        when(store.getLoansForMember(1000)).thenReturn(List.of(activeLoan));
+        when(activeLoan.isActive()).thenReturn(true);
+
+        boolean result = service.lendBook(1000, "123");
 
         assertFalse(result);
         verify(store, never()).addLoan(any());
@@ -327,51 +374,80 @@ public class LibraryServiceTest {
 
     @Test
     void lendBook_shouldReturnFalse_whenActiveLoanAlreadyExists() {
-        Member member = mock(Member.class);
-        Book book = new Book("123", "Java", "Author", 2020, 2);
+        Membership membership = new Membership(1000, "19900101-1234", 1, null, "ACTIVE", 0, 0);
+        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
+        MemberType type = new MemberType(1, "Student", 5);
         Loan existingLoan = mock(Loan.class);
 
-        when(store.getMember("1000")).thenReturn(member);
-        when(store.getBook("123")).thenReturn(book);
-        when(member.canBorrow(any(Date.class))).thenReturn(true);
-        when(store.getActiveLoan("1000", "123")).thenReturn(existingLoan);
+        when(store.getMembership(1000)).thenReturn(membership);
+        when(store.getBookTitle("123")).thenReturn(title);
+        when(store.getMemberType(1)).thenReturn(type);
+        when(store.getLoansForMember(1000)).thenReturn(Collections.emptyList());
+        when(store.getActiveLoan(1000, "123")).thenReturn(existingLoan);
 
-        boolean result = service.lendBook("1000", "123");
+        boolean result = service.lendBook(1000, "123");
 
         assertFalse(result);
         verify(store, never()).addLoan(any());
     }
 
     @Test
-    void lendBook_shouldCreateLoan_whenValid() {
-        Member member = new Member("1000", "John", "Doe", "19900101-1234", 1);
-        Book book = new Book("123", "Java", "Author", 2020, 2);
+    void lendBook_shouldReturnFalse_whenNoAvailableCopy() {
+        Membership membership = new Membership(1000, "19900101-1234", 1, null, "ACTIVE", 0, 0);
+        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
+        MemberType type = new MemberType(1, "Student", 5);
 
-        when(store.getMember("1000")).thenReturn(member);
-        when(store.getBook("123")).thenReturn(book);
-        when(store.getActiveLoan("1000", "123")).thenReturn(null);
+        when(store.getMembership(1000)).thenReturn(membership);
+        when(store.getBookTitle("123")).thenReturn(title);
+        when(store.getMemberType(1)).thenReturn(type);
+        when(store.getLoansForMember(1000)).thenReturn(Collections.emptyList());
+        when(store.getActiveLoan(1000, "123")).thenReturn(null);
+        when(store.getAvailableBookCopy("123")).thenReturn(null);
 
-        boolean result = service.lendBook("1000", "123");
+        boolean result = service.lendBook(1000, "123");
+
+        assertFalse(result);
+        verify(store, never()).addLoan(any());
+    }
+
+    @Test
+    void lendBook_shouldCreateLoanAndUpdateCopy_whenValid() {
+        Membership membership = new Membership(1000, "19900101-1234", 1, null, "ACTIVE", 0, 0);
+        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
+        MemberType type = new MemberType(1, "Student", 5);
+        BookCopy copy = new BookCopy(7, "123", "AVAILABLE");
+
+        when(store.getMembership(1000)).thenReturn(membership);
+        when(store.getBookTitle("123")).thenReturn(title);
+        when(store.getMemberType(1)).thenReturn(type);
+        when(store.getLoansForMember(1000)).thenReturn(Collections.emptyList());
+        when(store.getActiveLoan(1000, "123")).thenReturn(null);
+        when(store.getAvailableBookCopy("123")).thenReturn(copy);
+
+        boolean result = service.lendBook(1000, "123");
 
         assertTrue(result);
-        assertEquals(1, member.borrowedCount);
-        assertEquals(1, book.availableCopies);
+        assertEquals("LOANED", copy.status);
+        verify(store).updateBookCopy(copy);
 
         ArgumentCaptor<Loan> captor = ArgumentCaptor.forClass(Loan.class);
         verify(store).addLoan(captor.capture());
 
         Loan loan = captor.getValue();
-        assertEquals("1000", loan.memberId);
-        assertEquals("123", loan.isbn);
+        assertEquals(1000, loan.memberId);
+        assertEquals(7, loan.copyId);
         assertNotNull(loan.loanDate);
         assertNotNull(loan.dueDate);
+        assertNull(loan.returnDate);
     }
+
+    // ---------- returnBook ----------
 
     @Test
     void returnBook_shouldFail_whenMemberNotFound() {
-        when(store.getMember("1000")).thenReturn(null);
+        when(store.getMembership(1000)).thenReturn(null);
 
-        LibraryService.ReturnResult result = service.returnBook("1000", "123");
+        LibraryService.ReturnResult result = service.returnBook(1000, "123");
 
         assertFalse(result.success);
         assertEquals("Member not found.", result.message);
@@ -379,25 +455,27 @@ public class LibraryServiceTest {
 
     @Test
     void returnBook_shouldFail_whenBookNotFound() {
-        when(store.getMember("1000")).thenReturn(new Member("1000", "John", "Doe", "19900101-1234", 1));
-        when(store.getBook("123")).thenReturn(null);
+        Membership membership = new Membership(1000, "19900101-1234", 1, null, "ACTIVE", 0, 0);
 
-        LibraryService.ReturnResult result = service.returnBook("1000", "123");
+        when(store.getMembership(1000)).thenReturn(membership);
+        when(store.getBookTitle("123")).thenReturn(null);
+
+        LibraryService.ReturnResult result = service.returnBook(1000, "123");
 
         assertFalse(result.success);
         assertEquals("Book not found.", result.message);
     }
 
     @Test
-    void returnBook_shouldFail_whenNoActiveLoan() {
-        Member member = new Member("1000", "John", "Doe", "19900101-1234", 1);
-        Book book = new Book("123", "Java", "Author", 2020, 1);
+    void returnBook_shouldFail_whenNoActiveLoanFound() {
+        Membership membership = new Membership(1000, "19900101-1234", 1, null, "ACTIVE", 0, 0);
+        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
 
-        when(store.getMember("1000")).thenReturn(member);
-        when(store.getBook("123")).thenReturn(book);
-        when(store.getActiveLoan("1000", "123")).thenReturn(null);
+        when(store.getMembership(1000)).thenReturn(membership);
+        when(store.getBookTitle("123")).thenReturn(title);
+        when(store.getActiveLoan(1000, "123")).thenReturn(null);
 
-        LibraryService.ReturnResult result = service.returnBook("1000", "123");
+        LibraryService.ReturnResult result = service.returnBook(1000, "123");
 
         assertFalse(result.success);
         assertEquals("No active loan found.", result.message);
@@ -405,110 +483,118 @@ public class LibraryServiceTest {
 
     @Test
     void returnBook_shouldCompleteNormalReturn_whenNotLate() {
-        Member member = new Member("1000", "John", "Doe", "19900101-1234", 1);
-        member.borrowedCount = 1;
+        Membership membership = new Membership(1000, "19900101-1234", 1, null, "ACTIVE", 0, 0);
+        Date today = new Date();
+        Date futureDue = new Date(today.getTime() + 24L * 60 * 60 * 1000);
 
-        Book book = new Book("123", "Java", "Author", 2020, 1);
-        book.availableCopies = 0;
+        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
+        Loan loan = new Loan(1, 1000, 7, today, futureDue, null);
+        BookCopy copy = new BookCopy(7, "123", "LOANED");
 
-        Loan loan = mock(Loan.class);
-        when(loan.isLate(any(Date.class))).thenReturn(false);
+        when(store.getMembership(1000)).thenReturn(membership);
+        when(store.getBookTitle("123")).thenReturn(title);
+        when(store.getActiveLoan(1000, "123")).thenReturn(loan);
+        when(store.getBookCopies("123")).thenReturn(List.of(copy));
 
-        when(store.getMember("1000")).thenReturn(member);
-        when(store.getBook("123")).thenReturn(book);
-        when(store.getActiveLoan("1000", "123")).thenReturn(loan);
-
-        LibraryService.ReturnResult result = service.returnBook("1000", "123");
+        LibraryService.ReturnResult result = service.returnBook(1000, "123");
 
         assertTrue(result.success);
         assertFalse(result.late);
         assertEquals("Return completed.", result.message);
-        assertEquals(0, member.borrowedCount);
-        assertEquals(1, book.availableCopies);
-        verify(loan).isLate(any(Date.class));
+        assertNotNull(loan.returnDate);
+        assertEquals("AVAILABLE", copy.status);
+
+        verify(store).updateLoan(loan);
+        verify(store).updateBookCopy(copy);
+        verify(store, never()).addSuspension(any());
     }
 
     @Test
     void returnBook_shouldSuspendMember_afterThirdLateReturn() {
-        Member member = new Member("1000", "John", "Doe", "19900101-1234", 1);
-        member.borrowedCount = 1;
-        member.lateReturnCount = 2;
+        Membership membership = new Membership(1000, "19900101-1234", 1, null, "ACTIVE", 2, 0);
+        Date oldDate = new Date(System.currentTimeMillis() - 10L * 24 * 60 * 60 * 1000);
+        Date pastDue = new Date(System.currentTimeMillis() - 2L * 24 * 60 * 60 * 1000);
 
-        Book book = new Book("123", "Java", "Author", 2020, 1);
-        book.availableCopies = 0;
+        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
+        Loan loan = new Loan(1, 1000, 7, oldDate, pastDue, null);
+        BookCopy copy = new BookCopy(7, "123", "LOANED");
 
-        Loan loan = mock(Loan.class);
-        when(loan.isLate(any(Date.class))).thenReturn(true);
+        when(store.getMembership(1000)).thenReturn(membership);
+        when(store.getBookTitle("123")).thenReturn(title);
+        when(store.getActiveLoan(1000, "123")).thenReturn(loan);
+        when(store.getBookCopies("123")).thenReturn(List.of(copy));
 
-        when(store.getMember("1000")).thenReturn(member);
-        when(store.getBook("123")).thenReturn(book);
-        when(store.getActiveLoan("1000", "123")).thenReturn(loan);
-
-        LibraryService.ReturnResult result = service.returnBook("1000", "123");
+        LibraryService.ReturnResult result = service.returnBook(1000, "123");
 
         assertTrue(result.success);
         assertTrue(result.late);
-        assertNotNull(member.suspendedUntil);
-        assertEquals(1, member.suspensionCount);
+        assertNotNull(result.suspendedUntil);
         assertFalse(result.memberDeleted);
+        assertEquals(3, membership.lateReturnCount);
+        assertEquals(1, membership.suspensionCount);
+        assertEquals("SUSPENDED", membership.status);
+
+        verify(store).addSuspension(any(Suspension.class));
+        verify(store).updateMembership(membership);
     }
 
     @Test
-    void returnBook_shouldDeleteMember_whenSuspensionCountBecomesMoreThanTwo() {
-        Member member = new Member("1000", "John", "Doe", "19900101-1234", 1);
-        member.borrowedCount = 1;
-        member.lateReturnCount = 2;
-        member.suspensionCount = 2;
+    void returnBook_shouldDeleteMember_whenSuspensionCountExceedsTwo() {
+        Membership membership = new Membership(1000, "19900101-1234", 1, null, "ACTIVE", 2, 2);
+        Date oldDate = new Date(System.currentTimeMillis() - 10L * 24 * 60 * 60 * 1000);
+        Date pastDue = new Date(System.currentTimeMillis() - 2L * 24 * 60 * 60 * 1000);
 
-        Book book = new Book("123", "Java", "Author", 2020, 1);
-        book.availableCopies = 0;
+        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
+        Loan loan = new Loan(1, 1000, 7, oldDate, pastDue, null);
+        BookCopy copy = new BookCopy(7, "123", "LOANED");
 
-        Loan loan = mock(Loan.class);
-        when(loan.isLate(any(Date.class))).thenReturn(true);
+        when(store.getMembership(1000)).thenReturn(membership);
+        when(store.getBookTitle("123")).thenReturn(title);
+        when(store.getActiveLoan(1000, "123")).thenReturn(loan);
+        when(store.getBookCopies("123")).thenReturn(List.of(copy));
+        when(store.getLoansForMember(1000)).thenReturn(Collections.emptyList());
 
-        when(store.getMember("1000")).thenReturn(member);
-        when(store.getBook("123")).thenReturn(book);
-        when(store.getActiveLoan("1000", "123")).thenReturn(loan);
-        when(store.getLoansForMember("1000")).thenReturn(Collections.emptyList());
-
-        LibraryService.ReturnResult result = service.returnBook("1000", "123");
+        LibraryService.ReturnResult result = service.returnBook(1000, "123");
 
         assertTrue(result.success);
         assertTrue(result.late);
         assertTrue(result.memberDeleted);
-        verify(store).removeMember("1000");
+
+        verify(store).removeMembership(1000);
+    }
+
+    // ---------- getters ----------
+
+    @Test
+    void getBookTitle_shouldDelegateToStore() {
+        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
+        when(store.getBookTitle("123")).thenReturn(title);
+
+        BookTitle result = service.getBookTitle("123");
+
+        assertEquals(title, result);
+        verify(store).getBookTitle("123");
+    }
+
+    @Test
+    void getMembership_shouldDelegateToStore() {
+        Membership membership = new Membership(1000, "19900101-1234", 1, null, "ACTIVE", 0, 0);
+        when(store.getMembership(1000)).thenReturn(membership);
+
+        Membership result = service.getMembership(1000);
+
+        assertEquals(membership, result);
+        verify(store).getMembership(1000);
     }
 
     @Test
     void getLoansForMember_shouldDelegateToStore() {
-        List<Loan> loans = List.of(mock(Loan.class));
-        when(store.getLoansForMember("1000")).thenReturn(loans);
+        List<Loan> loans = List.of(new Loan(1, 1000, 7, new Date(), new Date(), null));
+        when(store.getLoansForMember(1000)).thenReturn(loans);
 
-        List<Loan> result = service.getLoansForMember("1000");
+        List<Loan> result = service.getLoansForMember(1000);
 
         assertEquals(loans, result);
-        verify(store).getLoansForMember("1000");
-    }
-
-    @Test
-    void getBook_shouldDelegateToStore() {
-        Book book = new Book("123", "Java", "Author", 2020, 1);
-        when(store.getBook("123")).thenReturn(book);
-
-        Book result = service.getBook("123");
-
-        assertEquals(book, result);
-        verify(store).getBook("123");
-    }
-
-    @Test
-    void getMember_shouldDelegateToStore() {
-        Member member = new Member("1000", "John", "Doe", "19900101-1234", 1);
-        when(store.getMember("1000")).thenReturn(member);
-
-        Member result = service.getMember("1000");
-
-        assertEquals(member, result);
-        verify(store).getMember("1000");
+        verify(store).getLoansForMember(1000);
     }
 }
