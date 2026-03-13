@@ -1,78 +1,132 @@
 package Database;
-
 import java.util.ArrayList;
 import java.util.List;
-import Processing.*;
 
 public class DbLibraryStore implements ILibraryStore {
 
-    @Override
-    public void addBook(Book newBook) {
-        // SQL here later
+    private final String connectionString;
+
+    public DbLibraryStore(String connectionString) {
+        this.connectionString = connectionString;
     }
 
     @Override
-    public void updateBook(Book book) {
-        // SQL here later
+    public void addBookTitle(BookTitle bookTitle) {
+        throw new UnsupportedOperationException("Not implemented yet.");
     }
 
     @Override
-    public Book getBook(String isbn) {
-        return null;
+    public BookTitle getBookTitle(String isbn) {
+        throw new UnsupportedOperationException("Not implemented yet.");
     }
 
     @Override
-    public void removeBook(String isbn) {
-        // SQL here later
+    public void removeBookTitle(String isbn) {
+        throw new UnsupportedOperationException("Not implemented yet.");
     }
 
     @Override
-    public void addMember(Member newMember) {
-        // SQL here later
+    public void addBookCopies(String isbn, int count) {
+        throw new UnsupportedOperationException("Not implemented yet.");
     }
 
     @Override
-    public void updateMember(Member member) {
-        // SQL here later
+    public List<BookCopy> getBookCopies(String isbn) {
+        return new ArrayList<>();
     }
 
     @Override
-    public Member getMember(String memberId) {
-        return null;
+    public BookCopy getAvailableBookCopy(String isbn) {
+        throw new UnsupportedOperationException("Not implemented yet.");
     }
 
     @Override
-    public Member getMemberByPersonalNumber(String personalNumber) {
-        return null;
+    public void updateBookCopy(BookCopy copy) {
+        throw new UnsupportedOperationException("Not implemented yet.");
     }
 
     @Override
-    public void removeMember(String memberId) {
-        // SQL here later
+    public void removeBookCopiesByIsbn(String isbn) {
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    @Override
+    public void addPerson(Person person) {
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    @Override
+    public Person getPerson(String personalNumber) {
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    @Override
+    public void addMembership(Membership membership) {
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    @Override
+    public Membership getMembership(int memberId) {
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    @Override
+    public Membership getMembershipByPersonalNumber(String personalNumber) {
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    @Override
+    public void updateMembership(Membership membership) {
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    @Override
+    public void removeMembership(int memberId) {
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    @Override
+    public MemberType getMemberType(int memberTypeId) {
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    @Override
+    public List<MemberType> getAllMemberTypes() {
+        return new ArrayList<>();
     }
 
     @Override
     public void addLoan(Loan loan) {
-        // SQL here later
+        throw new UnsupportedOperationException("Not implemented yet.");
     }
 
     @Override
     public void updateLoan(Loan loan) {
-        // SQL here later
+        throw new UnsupportedOperationException("Not implemented yet.");
     }
 
     @Override
-    public Loan getActiveLoan(String memberId, String isbn) {
-        return null;
+    public Loan getActiveLoan(int memberId, String isbn) {
+        throw new UnsupportedOperationException("Not implemented yet.");
     }
 
     @Override
-    public List<Loan> getLoansForMember(String memberId) {
+    public List<Loan> getLoansForMember(int memberId) {
         return new ArrayList<>();
     }
 
     @Override
     public List<Loan> getLoansForBook(String isbn) {
+        return new ArrayList<>();
+    }
+
+    @Override
+    public void addSuspension(Suspension suspension) {
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    @Override
+    public List<Suspension> getSuspensionsForMember(int memberId) {
         return new ArrayList<>();
     }
 }

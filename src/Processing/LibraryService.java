@@ -1,11 +1,8 @@
 package Processing;
-
-import Database.ILibraryStore;
-
 import java.util.Date;
 import java.util.List;
 
-public class LibraryService implements ILibraryService {
+public class LibraryService {
 
     private final ILibraryStore store;
     private int nextLoanId = 1;
@@ -14,7 +11,7 @@ public class LibraryService implements ILibraryService {
         this.store = store;
     }
 
-    public void addBookTitle(String isbn, String title, String author, int year, int copies) {
+    public void addBookTitle(String isbn, String title, String author, int publishYear, int copies) {
         if (isbn == null || isbn.isBlank()) {
             throw new IllegalArgumentException("ISBN is required.");
         }
@@ -25,18 +22,18 @@ public class LibraryService implements ILibraryService {
             throw new IllegalArgumentException("Copies must be at least 1.");
         }
 
-        Book existing = store.getBook(isbn);
-        if (existing != null) {
-            throw new IllegalArgumentException("A book with this ISBN already exists.");
+        if (store.getBookTitle(isbn) != null) {
+            throw new IllegalArgumentException("A book title with this ISBN already exists.");
         }
 
-        Book book = new Book(isbn, title, author, year, copies);
-        store.addBook(book);
+        BookTitle bookTitle = new BookTitle(isbn, title, author, publishYear);
+        store.addBookTitle(bookTitle);
+        store.addBookCopies(isbn, copies);
     }
 
-    public boolean deleteBook(String isbn) {
-        Book book = store.getBook(isbn);
-        if (book == null) {
+    public boolean deleteBookTitle(String isbn) {
+        BookTitle bookTitle = store.getBookTitle(isbn);
+        if (bookTitle == null) {
             return false;
         }
 
@@ -47,11 +44,12 @@ public class LibraryService implements ILibraryService {
             }
         }
 
-        store.removeBook(isbn);
+        store.removeBookCopiesByIsbn(isbn);
+        store.removeBookTitle(isbn);
         return true;
     }
 
-    public String registerMember(String firstName, String lastName, String personalNumber, int level) {
+    public String registerMember(String firstName, String lastName, String personalNumber, int memberTypeId) {
         if (firstName == null || firstName.isBlank()) {
             throw new IllegalArgumentException("First name is required.");
         }
@@ -61,39 +59,53 @@ public class LibraryService implements ILibraryService {
         if (personalNumber == null || personalNumber.isBlank()) {
             throw new IllegalArgumentException("Personal number is required.");
         }
-        if (level < 1 || level > 4) {
-            throw new IllegalArgumentException("Level must be 1-4.");
-        }
 
-        Member existing = store.getMemberByPersonalNumber(personalNumber);
+        Membership existing = store.getMembershipByPersonalNumber(personalNumber);
         if (existing != null) {
-            return existing.id;
+            return String.valueOf(existing.memberId);
         }
 
-        String newId = generateNextMemberId();
-        Member member = new Member(newId, firstName, lastName, personalNumber, level);
-        store.addMember(member);
-        return newId;
+        int newId = generateNextMemberId();
+
+        Person person = new Person(personalNumber, firstName, lastName);
+        Membership membership = new Membership(
+                newId,
+                personalNumber,
+                memberTypeId,
+                null,
+                "ACTIVE",
+                0,
+                0
+        );
+
+        store.addPerson(person);
+        store.addMembership(membership);
+
+        return String.valueOf(newId);
     }
 
-    public boolean suspendMember(String memberId, int days) {
-        Member member = store.getMember(memberId);
-        if (member == null) {
-            return false;
-        }
-
-        if (days <= 0) {
+    public boolean suspendMember(int memberId, int days) {
+        Membership membership = store.getMembership(memberId);
+        if (membership == null || days <= 0) {
             return false;
         }
 
         Date today = new Date();
-        member.suspendedUntil = addDays(today, days);
+        Date endDate = addDays(today, days);
+
+        membership.suspendedUntil = endDate;
+        membership.status = "SUSPENDED";
+        membership.suspensionCount++;
+
+        store.updateMembership(membership);
+        store.addSuspension(new Suspension(0, memberId, today, endDate, "Manual suspension"));
+
         return true;
     }
 
-    public boolean deleteMember(String memberId) {
-        Member member = store.getMember(memberId);
-        if (member == null) {
+    public boolean deleteMember(int memberId) {
+        Membership membership = store.getMembership(memberId);
+        if (membership == null) {
             return false;
         }
 
@@ -104,28 +116,38 @@ public class LibraryService implements ILibraryService {
             }
         }
 
-        store.removeMember(memberId);
+        store.removeMembership(memberId);
         return true;
     }
 
-    public boolean lendBook(String memberId, String isbn) {
-        Member member = store.getMember(memberId);
-        if (member == null) {
+    public boolean lendBook(int memberId, String isbn) {
+        Membership membership = store.getMembership(memberId);
+        if (membership == null) {
             return false;
         }
 
-        Book book = store.getBook(isbn);
-        if (book == null) {
+        BookTitle bookTitle = store.getBookTitle(isbn);
+        if (bookTitle == null) {
             return false;
         }
 
         Date today = new Date();
 
-        if (!member.canBorrow(today)) {
+        if (membership.isSuspended(today)) {
             return false;
         }
 
-        if (!book.isAvailable()) {
+        MemberType memberType = store.getMemberType(membership.memberTypeId);
+        List<Loan> currentLoans = store.getLoansForMember(memberId);
+
+        int activeLoans = 0;
+        for (Loan loan : currentLoans) {
+            if (loan.isActive()) {
+                activeLoans++;
+            }
+        }
+
+        if (activeLoans >= memberType.maxLoans) {
             return false;
         }
 
@@ -133,24 +155,35 @@ public class LibraryService implements ILibraryService {
             return false;
         }
 
-        book.availableCopies--;
-        member.borrowedCount++;
+        BookCopy copy = store.getAvailableBookCopy(isbn);
+        if (copy == null) {
+            return false;
+        }
 
-        Date dueDate = addDays(today, 15);
-        Loan loan = new Loan(nextLoanId++, memberId, isbn, today, dueDate);
+        copy.status = "LOANED";
+        store.updateBookCopy(copy);
+
+        Loan loan = new Loan(
+                nextLoanId++,
+                memberId,
+                copy.copyId,
+                today,
+                addDays(today, 15),
+                null
+        );
+
         store.addLoan(loan);
-
         return true;
     }
 
-    public ReturnResult returnBook(String memberId, String isbn) {
-        Member member = store.getMember(memberId);
-        if (member == null) {
+    public ReturnResult returnBook(int memberId, String isbn) {
+        Membership membership = store.getMembership(memberId);
+        if (membership == null) {
             return new ReturnResult(false, false, null, false, "Member not found.");
         }
 
-        Book book = store.getBook(isbn);
-        if (book == null) {
+        BookTitle bookTitle = store.getBookTitle(isbn);
+        if (bookTitle == null) {
             return new ReturnResult(false, false, null, false, "Book not found.");
         }
 
@@ -161,44 +194,61 @@ public class LibraryService implements ILibraryService {
 
         Date today = new Date();
         loan.returnDate = today;
+        store.updateLoan(loan);
 
-        book.availableCopies++;
-
-        if (member.borrowedCount > 0) {
-            member.borrowedCount--;
-        }
-
-        boolean wasLate = loan.isLate(today);
-        boolean deleted = false;
-        Date suspendedUntil = null;
-
-        if (wasLate) {
-            member.lateReturnCount++;
-
-            if (member.lateReturnCount > 2) {
-                member.suspendedUntil = addDays(today, 15);
-                member.suspensionCount++;
-                suspendedUntil = member.suspendedUntil;
-
-                if (member.suspensionCount > 2) {
-                    deleted = deleteMember(memberId);
-                }
+        BookCopy returnedCopy = null;
+        for (BookCopy copy : store.getBookCopies(isbn)) {
+            if (copy.copyId == loan.copyId) {
+                returnedCopy = copy;
+                break;
             }
         }
 
-        return new ReturnResult(true, wasLate, suspendedUntil, deleted, "Return completed.");
+        if (returnedCopy != null) {
+            returnedCopy.status = "AVAILABLE";
+            store.updateBookCopy(returnedCopy);
+        }
+
+        boolean wasLate = today.after(loan.dueDate);
+        boolean memberDeleted = false;
+        Date suspendedUntil = null;
+
+        if (wasLate) {
+            membership.lateReturnCount++;
+
+            if (membership.lateReturnCount > 2) {
+                suspendedUntil = addDays(today, 15);
+                membership.suspendedUntil = suspendedUntil;
+                membership.status = "SUSPENDED";
+                membership.suspensionCount++;
+
+                store.addSuspension(new Suspension(
+                        0, memberId, today, suspendedUntil, "Late returns"
+                ));
+
+                if (membership.suspensionCount > 2) {
+                    memberDeleted = deleteMember(memberId);
+                } else {
+                    store.updateMembership(membership);
+                }
+            } else {
+                store.updateMembership(membership);
+            }
+        }
+
+        return new ReturnResult(true, wasLate, suspendedUntil, memberDeleted, "Return completed.");
     }
 
-    public List<Loan> getLoansForMember(String memberId) {
+    public BookTitle getBookTitle(String isbn) {
+        return store.getBookTitle(isbn);
+    }
+
+    public Membership getMembership(int memberId) {
+        return store.getMembership(memberId);
+    }
+
+    public List<Loan> getLoansForMember(int memberId) {
         return store.getLoansForMember(memberId);
-    }
-
-    public Book getBook(String isbn) {
-        return store.getBook(isbn);
-    }
-
-    public Member getMember(String memberId) {
-        return store.getMember(memberId);
     }
 
     private Date addDays(Date date, int days) {
@@ -206,17 +256,16 @@ public class LibraryService implements ILibraryService {
         return new Date(date.getTime() + ms);
     }
 
-    private String generateNextMemberId() {
+    private int generateNextMemberId() {
         for (int i = 1000; i <= 9999; i++) {
-            String id = String.valueOf(i);
-            if (store.getMember(id) == null) {
-                return id;
+            if (store.getMembership(i) == null) {
+                return i;
             }
         }
         throw new IllegalStateException("No free member IDs available.");
     }
 
-    public class ReturnResult {
+    public static class ReturnResult {
         public final boolean success;
         public final boolean late;
         public final Date suspendedUntil;
