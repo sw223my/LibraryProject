@@ -108,8 +108,7 @@ public class LibraryService {
         membership.suspensionCount++;
 
         store.updateMembership(membership);
-        store.addSuspension(new Suspension(0, memberId, today, endDate, "Manual suspension"));
-
+        store.addSuspension(new Suspension(0, memberId, today, endDate));
         return true;
     }
 
@@ -237,7 +236,7 @@ public class LibraryService {
                 membership.suspensionCount++;
 
                 store.addSuspension(new Suspension(
-                        0, memberId, today, suspendedUntil, "Late returns"
+                        0, memberId, today, suspendedUntil
                 ));
 
                 if (membership.suspensionCount > 2) {

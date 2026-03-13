@@ -672,15 +672,16 @@ public class DbLibraryStore implements ILibraryStore {
     @Override
     public void addSuspension(Suspension suspension) {
         String sql = """
+            
                 INSERT INTO suspension (
-                    suspension_id,
-                    member_id,
-                    start_date,
-                    end_date,
-                    reason
-                )
-                VALUES (?, ?, ?, ?, ?)
-                """;
+                suspension_id,
+                member_id,
+                start_date,
+                end_date
+                            )
+                            VALUES (
+                ?, ?, ?, ?)
+            """;
 
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -689,22 +690,20 @@ public class DbLibraryStore implements ILibraryStore {
             stmt.setInt(2, suspension.memberId);
             stmt.setDate(3, toSqlDate(suspension.startDate));
             stmt.setDate(4, toSqlDate(suspension.endDate));
-            stmt.setString(5, suspension.reason);
 
             stmt.executeUpdate();
         } catch (SQLException e) {
-            throw new RuntimeException("Could not add suspension.", e);
+            throw new RuntimeException("Could not suspension.", e);
         }
     }
-
     @Override
     public List<Suspension> getSuspensionsForMember(int memberId) {
         String sql = """
-                SELECT suspension_id, member_id, start_date, end_date, reason
-                FROM suspension
-                WHERE member_id = ?
-                ORDER BY start_date DESC, suspension_id DESC
-                """;
+            SELECT suspension_id, member_id, start_date, end_date
+            FROM suspension
+            WHERE member_id = ?
+            ORDER BY start_date DESC, suspension_id DESC
+            """;
 
         List<Suspension> suspensions = new ArrayList<>();
 
@@ -719,8 +718,7 @@ public class DbLibraryStore implements ILibraryStore {
                             rs.getInt("suspension_id"),
                             rs.getInt("member_id"),
                             toUtilDate(rs.getDate("start_date")),
-                            toUtilDate(rs.getDate("end_date")),
-                            rs.getString("reason")
+                            toUtilDate(rs.getDate("end_date"))
                     ));
                 }
             }
