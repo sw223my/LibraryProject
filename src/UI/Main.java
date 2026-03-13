@@ -11,22 +11,27 @@ import Processing.LibraryService;
 import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Scanner;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Properties;
+
 
 public class Main {
 
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
 
     public static void main(String[] args) {
-        String url = "jdbc:mysql://localhost:3306/library_system?sslMode=DISABLED&allowPublicKeyRetrieval=true&serverTimezone=UTC";
-        String user = "root";
-        String password = "Fotboll_0533!";
+        Properties props = loadDatabaseProperties();
+
+        String url = props.getProperty("db.url");
+        String user = props.getProperty("db.user");
+        String password = props.getProperty("db.password");
 
         ILibraryStore store = new DbLibraryStore(url, user, password);
         LibraryService svc = new LibraryService(store);
         Scanner scanner = new Scanner(System.in);
 
         System.out.println("Welcome to the Library Lending Management System");
-        System.out.println("Logged in as librarian.");
 
         boolean done = false;
 
@@ -320,5 +325,17 @@ public class Main {
     private static String findIsbnForCopy(ILibraryStore store, int copyId) {
         BookCopy copy = store.getBookCopy(copyId);
         return copy == null ? null : copy.isbn;
+    }
+
+    private static Properties loadDatabaseProperties() {
+        Properties props = new Properties();
+
+        try (FileInputStream fis = new FileInputStream("db.properties")) {
+            props.load(fis);
+        } catch (IOException e) {
+            throw new RuntimeException("Kunde inte läsa db.properties", e);
+        }
+
+        return props;
     }
 }

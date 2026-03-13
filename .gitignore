@@ -27,3 +27,15 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+# Database credentials - never commit this
+db.properties
+
+# Compiled output
+*.class
+out/
+target/
+
+# IDE files
+.idea/
+*.iml
+.vscode/
