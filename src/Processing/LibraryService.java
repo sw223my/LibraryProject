@@ -12,10 +12,9 @@ import Objects.Suspension;
 import java.util.Date;
 import java.util.List;
 
-public class LibraryService {
+public class LibraryService implements ILibraryService {
 
     private final ILibraryStore store;
-    private int nextLoanId = 1;
 
     public LibraryService(ILibraryStore store) {
         this.store = store;
@@ -70,16 +69,18 @@ public class LibraryService {
             throw new IllegalArgumentException("Personal number is required.");
         }
 
-        Membership existing = store.getMembershipByPersonalNumber(personalNumber);
-        if (existing != null) {
-            return String.valueOf(existing.memberId);
+        Membership existingMembership = store.getMembershipByPersonalNumber(personalNumber);
+        if (existingMembership != null) {
+            return String.valueOf(existingMembership.memberId);
         }
 
-        int newId = generateNextMemberId();
+        Person existingPerson = store.getPerson(personalNumber);
+        if (existingPerson == null) {
+            store.addPerson(new Person(personalNumber, firstName, lastName));
+        }
 
-        Person person = new Person(personalNumber, firstName, lastName);
         Membership membership = new Membership(
-                newId,
+                0,
                 personalNumber,
                 memberTypeId,
                 null,
@@ -88,10 +89,9 @@ public class LibraryService {
                 0
         );
 
-        store.addPerson(person);
         store.addMembership(membership);
 
-        return String.valueOf(newId);
+        return String.valueOf(membership.memberId);
     }
 
     public boolean suspendMember(int memberId, int days) {
@@ -177,7 +177,7 @@ public class LibraryService {
         store.updateBookCopy(copy);
 
         Loan loan = new Loan(
-                nextLoanId++,
+                0,
                 memberId,
                 copy.copyId,
                 today,
@@ -267,15 +267,6 @@ public class LibraryService {
     private Date addDays(Date date, int days) {
         long ms = days * 24L * 60 * 60 * 1000;
         return new Date(date.getTime() + ms);
-    }
-
-    private int generateNextMemberId() {
-        for (int i = 1000; i <= 9999; i++) {
-            if (store.getMembership(i) == null) {
-                return i;
-            }
-        }
-        throw new IllegalStateException("No free member IDs available.");
     }
 
     public static class ReturnResult {

@@ -17,7 +17,7 @@ public class Main {
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
 
     public static void main(String[] args) {
-        String url = "jdbc:mysql://localhost:3306/library_system?sslMode=DISABLED&serverTimezone=UTC";
+        String url = "jdbc:mysql://localhost:3306/library_system?sslMode=DISABLED&allowPublicKeyRetrieval=true&serverTimezone=UTC";
         String user = "root";
         String password = "Fotboll_0533!";
 
@@ -31,7 +31,7 @@ public class Main {
         boolean done = false;
 
         while (!done) {
-            printMenu();
+            printMainMenu();
             String input = scanner.nextLine();
 
             int selection;
@@ -45,13 +45,8 @@ public class Main {
             switch (selection) {
                 case 1 -> handleLendBook(scanner, svc);
                 case 2 -> handleReturnBook(scanner, svc);
-                case 3 -> handleShowLoans(scanner, svc, store);
-                case 4 -> handleCheckBook(scanner, svc, store);
-                case 5 -> handleAddBook(scanner, svc);
-                case 6 -> handleDeleteBook(scanner, svc);
-                case 7 -> handleRegisterMember(scanner, svc);
-                case 8 -> handleDeleteMember(scanner, svc);
-                case 9 -> handleSuspendMember(scanner, svc);
+                case 3 -> manageLoans(scanner, svc, store);
+                case 4 -> manageMembers(scanner, svc);
                 case 0 -> done = true;
                 default -> System.out.println("Invalid menu choice.");
             }
@@ -61,20 +56,77 @@ public class Main {
         scanner.close();
     }
 
-    private static void printMenu() {
+    private static void printMainMenu() {
         System.out.println();
-        System.out.println("Menu:");
-        System.out.println("1. Lend item");
-        System.out.println("2. Return item");
-        System.out.println("3. Show member loans");
-        System.out.println("4. Check book status");
-        System.out.println("5. Add book");
-        System.out.println("6. Delete book");
-        System.out.println("7. Register member");
-        System.out.println("8. Delete member");
-        System.out.println("9. Suspend member");
+        System.out.println("Main menu:");
+        System.out.println("1. Loan book");
+        System.out.println("2. Return book");
+        System.out.println("3. Manage loans");
+        System.out.println("4. Manage members");
         System.out.println("0. Exit");
         System.out.print("Select: ");
+    }
+
+    private static void manageLoans(Scanner scanner, LibraryService svc, ILibraryStore store) {
+        boolean back = false;
+
+        while (!back) {
+            System.out.println();
+            System.out.println("Manage loans:");
+            System.out.println("1. Show member loans");
+            System.out.println("2. Check book status");
+            System.out.println("0. Back");
+            System.out.print("Select: ");
+
+            String input = scanner.nextLine();
+            int selection;
+
+            try {
+                selection = Integer.parseInt(input);
+            } catch (NumberFormatException e) {
+                System.out.println("Please enter a valid number.");
+                continue;
+            }
+
+            switch (selection) {
+                case 1 -> handleShowLoans(scanner, svc, store);
+                case 2 -> handleCheckBook(scanner, svc, store);
+                case 0 -> back = true;
+                default -> System.out.println("Invalid menu choice.");
+            }
+        }
+    }
+
+    private static void manageMembers(Scanner scanner, LibraryService svc) {
+        boolean back = false;
+
+        while (!back) {
+            System.out.println();
+            System.out.println("Manage members:");
+            System.out.println("1. Register member");
+            System.out.println("2. Delete member");
+            System.out.println("3. Suspend member");
+            System.out.println("0. Back");
+            System.out.print("Select: ");
+
+            String input = scanner.nextLine();
+            int selection;
+
+            try {
+                selection = Integer.parseInt(input);
+            } catch (NumberFormatException e) {
+                System.out.println("Please enter a valid number.");
+                continue;
+            }
+
+            switch (selection) {
+                case 1 -> handleRegisterMember(scanner, svc);
+                case 2 -> handleDeleteMember(scanner, svc);
+                case 3 -> handleSuspendMember(scanner, svc);
+                case 0 -> back = true;
+                default -> System.out.println("Invalid menu choice.");
+            }
+        }
     }
 
     private static void handleLendBook(Scanner scanner, LibraryService svc) {
@@ -200,38 +252,6 @@ public class Main {
         System.out.println("Status: " + (availableCopies > 0 ? "Available" : "Not available"));
     }
 
-    private static void handleAddBook(Scanner scanner, LibraryService svc) {
-        try {
-            System.out.print("Enter ISBN: ");
-            String isbn = scanner.nextLine();
-
-            System.out.print("Enter title: ");
-            String title = scanner.nextLine();
-
-            System.out.print("Enter author: ");
-            String author = scanner.nextLine();
-
-            System.out.print("Enter year: ");
-            int year = Integer.parseInt(scanner.nextLine());
-
-            System.out.print("Enter number of copies: ");
-            int copies = Integer.parseInt(scanner.nextLine());
-
-            svc.addBookTitle(isbn, title, author, year, copies);
-            System.out.println("Book added.");
-        } catch (Exception e) {
-            System.out.println("Could not add book: " + e.getMessage());
-        }
-    }
-
-    private static void handleDeleteBook(Scanner scanner, LibraryService svc) {
-        System.out.print("Enter ISBN: ");
-        String isbn = scanner.nextLine();
-
-        boolean ok = svc.deleteBookTitle(isbn);
-        System.out.println(ok ? "Book deleted." : "Could not delete book. It may not exist or still have active loans.");
-    }
-
     private static void handleRegisterMember(Scanner scanner, LibraryService svc) {
         try {
             System.out.print("Enter first name: ");
@@ -247,7 +267,10 @@ public class Main {
             int level = Integer.parseInt(scanner.nextLine());
 
             String memberId = svc.registerMember(firstName, lastName, personalNumber, level);
-            System.out.println("Member registered or already exists. Member ID: " + memberId);
+
+            System.out.println("Registration completed.");
+            System.out.println("Member ID: " + memberId);
+            System.out.println("Please give this ID to the member.");
         } catch (Exception e) {
             System.out.println("Could not register member: " + e.getMessage());
         }
@@ -260,7 +283,9 @@ public class Main {
         }
 
         boolean ok = svc.deleteMember(memberId);
-        System.out.println(ok ? "Member deleted." : "Could not delete member. Member may not exist or still has active loans.");
+        System.out.println(ok
+                ? "Member deleted."
+                : "Could not delete member. Member may not exist or still has active loans.");
     }
 
     private static void handleSuspendMember(Scanner scanner, LibraryService svc) {
@@ -293,23 +318,7 @@ public class Main {
     }
 
     private static String findIsbnForCopy(ILibraryStore store, int copyId) {
-        String[] knownIsbns = {
-                "238103", "111111", "222222", "333333", "444444",
-                "555555", "666666", "777777", "888888", "999999"
-        };
-
-        for (String isbn : knownIsbns) {
-            BookTitle title = store.getBookTitle(isbn);
-            if (title == null) {
-                continue;
-            }
-
-            for (BookCopy copy : store.getBookCopies(isbn)) {
-                if (copy.copyId == copyId) {
-                    return copy.isbn;
-                }
-            }
-        }
-        return null;
+        BookCopy copy = store.getBookCopy(copyId);
+        return copy == null ? null : copy.isbn;
     }
 }

@@ -14,6 +14,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -163,6 +164,33 @@ public class DbLibraryStore implements ILibraryStore {
         }
     }
 
+    public BookCopy getBookCopy(int copyId) {
+        String sql = """
+                SELECT copy_id, isbn, status
+                FROM book_copy
+                WHERE copy_id = ?
+                """;
+
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, copyId);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return new BookCopy(
+                            rs.getInt("copy_id"),
+                            rs.getString("isbn"),
+                            rs.getString("status")
+                    );
+                }
+                return null;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not fetch book copy.", e);
+        }
+    }
+
     @Override
     public BookCopy getAvailableBookCopy(String isbn) {
         String sql = """
@@ -283,7 +311,6 @@ public class DbLibraryStore implements ILibraryStore {
     public void addMembership(Membership membership) {
         String sql = """
                 INSERT INTO membership (
-                    member_id,
                     personal_number,
                     member_type_id,
                     suspended_until,
@@ -291,21 +318,26 @@ public class DbLibraryStore implements ILibraryStore {
                     late_return_count,
                     suspension_count
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """;
 
         try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            stmt.setInt(1, membership.memberId);
-            stmt.setString(2, membership.personalNumber);
-            stmt.setInt(3, membership.memberTypeId);
-            stmt.setDate(4, toSqlDate(membership.suspendedUntil));
-            stmt.setString(5, membership.status);
-            stmt.setInt(6, membership.lateReturnCount);
-            stmt.setInt(7, membership.suspensionCount);
+            stmt.setString(1, membership.personalNumber);
+            stmt.setInt(2, membership.memberTypeId);
+            stmt.setDate(3, toSqlDate(membership.suspendedUntil));
+            stmt.setString(4, membership.status);
+            stmt.setInt(5, membership.lateReturnCount);
+            stmt.setInt(6, membership.suspensionCount);
 
             stmt.executeUpdate();
+
+            try (ResultSet keys = stmt.getGeneratedKeys()) {
+                if (keys.next()) {
+                    membership.memberId = keys.getInt(1);
+                }
+            }
         } catch (SQLException e) {
             throw new RuntimeException("Could not add membership.", e);
         }
@@ -496,27 +528,31 @@ public class DbLibraryStore implements ILibraryStore {
     public void addLoan(Loan loan) {
         String sql = """
                 INSERT INTO loan (
-                    loan_id,
                     member_id,
                     copy_id,
                     loan_date,
                     due_date,
                     return_date
                 )
-                VALUES (?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?)
                 """;
 
         try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            stmt.setInt(1, loan.loanId);
-            stmt.setInt(2, loan.memberId);
-            stmt.setInt(3, loan.copyId);
-            stmt.setDate(4, toSqlDate(loan.loanDate));
-            stmt.setDate(5, toSqlDate(loan.dueDate));
-            stmt.setDate(6, toSqlDate(loan.returnDate));
+            stmt.setInt(1, loan.memberId);
+            stmt.setInt(2, loan.copyId);
+            stmt.setDate(3, toSqlDate(loan.loanDate));
+            stmt.setDate(4, toSqlDate(loan.dueDate));
+            stmt.setDate(5, toSqlDate(loan.returnDate));
 
             stmt.executeUpdate();
+
+            try (ResultSet keys = stmt.getGeneratedKeys()) {
+                if (keys.next()) {
+                    loan.loanId = keys.getInt(1);
+                }
+            }
         } catch (SQLException e) {
             throw new RuntimeException("Could not add loan.", e);
         }
@@ -672,38 +708,41 @@ public class DbLibraryStore implements ILibraryStore {
     @Override
     public void addSuspension(Suspension suspension) {
         String sql = """
-            
                 INSERT INTO suspension (
-                suspension_id,
-                member_id,
-                start_date,
-                end_date
-                            )
-                            VALUES (
-                ?, ?, ?, ?)
-            """;
+                    member_id,
+                    start_date,
+                    end_date
+                )
+                VALUES (?, ?, ?)
+                """;
 
         try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            stmt.setInt(1, suspension.suspensionId);
-            stmt.setInt(2, suspension.memberId);
-            stmt.setDate(3, toSqlDate(suspension.startDate));
-            stmt.setDate(4, toSqlDate(suspension.endDate));
+            stmt.setInt(1, suspension.memberId);
+            stmt.setDate(2, toSqlDate(suspension.startDate));
+            stmt.setDate(3, toSqlDate(suspension.endDate));
 
             stmt.executeUpdate();
+
+            try (ResultSet keys = stmt.getGeneratedKeys()) {
+                if (keys.next()) {
+                    suspension.suspensionId = keys.getInt(1);
+                }
+            }
         } catch (SQLException e) {
-            throw new RuntimeException("Could not suspension.", e);
+            throw new RuntimeException("Could not add suspension.", e);
         }
     }
+
     @Override
     public List<Suspension> getSuspensionsForMember(int memberId) {
         String sql = """
-            SELECT suspension_id, member_id, start_date, end_date
-            FROM suspension
-            WHERE member_id = ?
-            ORDER BY start_date DESC, suspension_id DESC
-            """;
+                SELECT suspension_id, member_id, start_date, end_date
+                FROM suspension
+                WHERE member_id = ?
+                ORDER BY start_date DESC, suspension_id DESC
+                """;
 
         List<Suspension> suspensions = new ArrayList<>();
 

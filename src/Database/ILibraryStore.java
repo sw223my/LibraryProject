@@ -21,6 +21,7 @@ public interface ILibraryStore {
     BookCopy getAvailableBookCopy(String isbn);
     void updateBookCopy(BookCopy copy);
     void removeBookCopiesByIsbn(String isbn);
+    BookCopy getBookCopy(int copyId);
 
     void addPerson(Person person);
     Person getPerson(String personalNumber);

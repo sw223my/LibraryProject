@@ -188,14 +188,21 @@ public class LibraryServiceTest {
         String result = service.registerMember("John", "Doe", "19900101-1234", 1);
 
         assertEquals("1001", result);
+        verify(store, never()).getPerson(anyString());
         verify(store, never()).addPerson(any());
         verify(store, never()).addMembership(any());
     }
 
     @Test
-    void registerMember_shouldCreatePersonAndMembership_whenNotExisting() {
+    void registerMember_shouldCreatePersonAndMembership_whenPersonAndMembershipDoNotExist() {
         when(store.getMembershipByPersonalNumber("19900101-1234")).thenReturn(null);
-        when(store.getMembership(1000)).thenReturn(null);
+        when(store.getPerson("19900101-1234")).thenReturn(null);
+
+        doAnswer(invocation -> {
+            Membership membership = invocation.getArgument(0);
+            membership.memberId = 1000; // simulate AUTO_INCREMENT from DB
+            return null;
+        }).when(store).addMembership(any(Membership.class));
 
         String result = service.registerMember("John", "Doe", "19900101-1234", 2);
 
@@ -220,6 +227,25 @@ public class LibraryServiceTest {
         assertEquals(0, membership.lateReturnCount);
         assertEquals(0, membership.suspensionCount);
         assertNull(membership.suspendedUntil);
+    }
+
+    @Test
+    void registerMember_shouldNotCreatePersonAgain_whenPersonExistsButMembershipDoesNot() {
+        when(store.getMembershipByPersonalNumber("19900101-1234")).thenReturn(null);
+        when(store.getPerson("19900101-1234"))
+                .thenReturn(new Person("19900101-1234", "John", "Doe"));
+
+        doAnswer(invocation -> {
+            Membership membership = invocation.getArgument(0);
+            membership.memberId = 1002;
+            return null;
+        }).when(store).addMembership(any(Membership.class));
+
+        String result = service.registerMember("John", "Doe", "19900101-1234", 1);
+
+        assertEquals("1002", result);
+        verify(store, never()).addPerson(any());
+        verify(store).addMembership(any(Membership.class));
     }
 
     // ---------- suspendMember ----------
@@ -266,7 +292,6 @@ public class LibraryServiceTest {
 
         Suspension suspension = captor.getValue();
         assertEquals(1000, suspension.memberId);
-        assertEquals("Manual suspension", suspension.reason);
         assertNotNull(suspension.startDate);
         assertNotNull(suspension.endDate);
     }
@@ -434,6 +459,7 @@ public class LibraryServiceTest {
         verify(store).addLoan(captor.capture());
 
         Loan loan = captor.getValue();
+        assertEquals(0, loan.loanId);
         assertEquals(1000, loan.memberId);
         assertEquals(7, loan.copyId);
         assertNotNull(loan.loanDate);

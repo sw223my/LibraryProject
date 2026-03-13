@@ -24,6 +24,9 @@ public class InMemoryLibraryStore implements ILibraryStore {
     private final List<Suspension> suspensions = new ArrayList<>();
 
     private int nextCopyId = 1;
+    private int nextMemberId = 1000;
+    private int nextLoanId = 1;
+    private int nextSuspensionId = 1;
 
     public InMemoryLibraryStore() {
         memberTypes.put(1, new MemberType(1, "Undergraduate", 3));
@@ -65,6 +68,18 @@ public class InMemoryLibraryStore implements ILibraryStore {
     @Override
     public List<BookCopy> getBookCopies(String isbn) {
         return new ArrayList<>(bookCopiesByIsbn.getOrDefault(isbn, new ArrayList<>()));
+    }
+
+    @Override
+    public BookCopy getBookCopy(int copyId) {
+        for (List<BookCopy> copies : bookCopiesByIsbn.values()) {
+            for (BookCopy copy : copies) {
+                if (copy.copyId == copyId) {
+                    return copy;
+                }
+            }
+        }
+        return null;
     }
 
     @Override
@@ -119,6 +134,11 @@ public class InMemoryLibraryStore implements ILibraryStore {
         if (membership == null) {
             return;
         }
+
+        if (membership.memberId <= 0) {
+            membership.memberId = nextMemberId++;
+        }
+
         memberships.put(membership.memberId, membership);
     }
 
@@ -162,9 +182,15 @@ public class InMemoryLibraryStore implements ILibraryStore {
 
     @Override
     public void addLoan(Loan loan) {
-        if (loan != null) {
-            loans.add(loan);
+        if (loan == null) {
+            return;
         }
+
+        if (loan.loanId <= 0) {
+            loan.loanId = nextLoanId++;
+        }
+
+        loans.add(loan);
     }
 
     @Override
@@ -172,6 +198,7 @@ public class InMemoryLibraryStore implements ILibraryStore {
         if (loan == null) {
             return;
         }
+
         for (int i = 0; i < loans.size(); i++) {
             if (loans.get(i).loanId == loan.loanId) {
                 loans.set(i, loan);
@@ -223,9 +250,15 @@ public class InMemoryLibraryStore implements ILibraryStore {
 
     @Override
     public void addSuspension(Suspension suspension) {
-        if (suspension != null) {
-            suspensions.add(suspension);
+        if (suspension == null) {
+            return;
         }
+
+        if (suspension.suspensionId <= 0) {
+            suspension.suspensionId = nextSuspensionId++;
+        }
+
+        suspensions.add(suspension);
     }
 
     @Override
