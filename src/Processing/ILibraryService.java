@@ -19,5 +19,6 @@ public interface ILibraryService {
 
     List<Loan> getLoansForMember(int memberId);
     BookTitle getBookTitle(String isbn);
+    List<BookTitle> searchBookTitles(String titleQuery);
     Membership getMembership(int memberId);
 }

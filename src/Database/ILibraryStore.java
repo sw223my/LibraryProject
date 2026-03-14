@@ -14,6 +14,7 @@ public interface ILibraryStore {
 
     void addBookTitle(BookTitle bookTitle);
     BookTitle getBookTitle(String isbn);
+    List<BookTitle> searchBookTitlesByTitle(String titleQuery);
     void removeBookTitle(String isbn);
 
     void addBookCopies(String isbn, int count);
@@ -36,6 +37,7 @@ public interface ILibraryStore {
 
     MemberType getMemberType(int memberTypeId);
     List<MemberType> getAllMemberTypes();
+
 
     void addLoan(Loan loan);
     void updateLoan(Loan loan);

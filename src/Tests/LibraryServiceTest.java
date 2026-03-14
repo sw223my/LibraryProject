@@ -151,6 +151,7 @@ public class LibraryServiceTest {
     }
 
     // ---------- registerMember ----------
+    // ---------- registerMember ----------
 
     @Test
     void registerMember_shouldThrow_whenFirstNameBlank() {
@@ -163,6 +164,7 @@ public class LibraryServiceTest {
         verify(store, never()).getMemberType(anyInt());
         verify(store, never()).getMembershipByPersonalNumber(anyString());
         verify(store, never()).getPerson(anyString());
+        verify(store, never()).generateMemberId();
         verify(store, never()).addPerson(any());
         verify(store, never()).addMembership(any());
     }
@@ -178,6 +180,7 @@ public class LibraryServiceTest {
         verify(store, never()).getMemberType(anyInt());
         verify(store, never()).getMembershipByPersonalNumber(anyString());
         verify(store, never()).getPerson(anyString());
+        verify(store, never()).generateMemberId();
         verify(store, never()).addPerson(any());
         verify(store, never()).addMembership(any());
     }
@@ -193,6 +196,7 @@ public class LibraryServiceTest {
         verify(store, never()).getMemberType(anyInt());
         verify(store, never()).getMembershipByPersonalNumber(anyString());
         verify(store, never()).getPerson(anyString());
+        verify(store, never()).generateMemberId();
         verify(store, never()).addPerson(any());
         verify(store, never()).addMembership(any());
     }
@@ -210,6 +214,7 @@ public class LibraryServiceTest {
         verify(store).getMemberType(99);
         verify(store, never()).getMembershipByPersonalNumber(anyString());
         verify(store, never()).getPerson(anyString());
+        verify(store, never()).generateMemberId();
         verify(store, never()).addPerson(any());
         verify(store, never()).addMembership(any());
     }
@@ -227,6 +232,7 @@ public class LibraryServiceTest {
         verify(store).getMemberType(1);
         verify(store).getMembershipByPersonalNumber("19900101-1234");
         verify(store, never()).getPerson(anyString());
+        verify(store, never()).generateMemberId();
         verify(store, never()).addPerson(any());
         verify(store, never()).addMembership(any());
     }
@@ -236,12 +242,7 @@ public class LibraryServiceTest {
         when(store.getMemberType(2)).thenReturn(new MemberType(2, "Postgraduate", 5));
         when(store.getMembershipByPersonalNumber("19900101-1234")).thenReturn(null);
         when(store.getPerson("19900101-1234")).thenReturn(null);
-
-        doAnswer(invocation -> {
-            Membership membership = invocation.getArgument(0);
-            membership.memberId = 1000;
-            return null;
-        }).when(store).addMembership(any(Membership.class));
+        when(store.generateMemberId()).thenReturn(1000);
 
         String result = service.registerMember("John", "Doe", "19900101-1234", 2);
 
@@ -253,6 +254,7 @@ public class LibraryServiceTest {
         verify(store).getMemberType(2);
         verify(store).getMembershipByPersonalNumber("19900101-1234");
         verify(store).getPerson("19900101-1234");
+        verify(store).generateMemberId();
         verify(store).addPerson(personCaptor.capture());
         verify(store).addMembership(membershipCaptor.capture());
 
@@ -278,21 +280,29 @@ public class LibraryServiceTest {
         when(store.getMembershipByPersonalNumber("19900101-1234")).thenReturn(null);
         when(store.getPerson("19900101-1234"))
                 .thenReturn(new Person("19900101-1234", "John", "Doe", false));
-
-        doAnswer(invocation -> {
-            Membership membership = invocation.getArgument(0);
-            membership.memberId = 1002;
-            return null;
-        }).when(store).addMembership(any(Membership.class));
+        when(store.generateMemberId()).thenReturn(1002);
 
         String result = service.registerMember("John", "Doe", "19900101-1234", 1);
 
         assertEquals("1002", result);
+
+        ArgumentCaptor<Membership> membershipCaptor = ArgumentCaptor.forClass(Membership.class);
+
         verify(store).getMemberType(1);
         verify(store).getMembershipByPersonalNumber("19900101-1234");
         verify(store).getPerson("19900101-1234");
+        verify(store).generateMemberId();
         verify(store, never()).addPerson(any());
-        verify(store).addMembership(any(Membership.class));
+        verify(store).addMembership(membershipCaptor.capture());
+
+        Membership membership = membershipCaptor.getValue();
+        assertEquals(1002, membership.memberId);
+        assertEquals("19900101-1234", membership.personalNumber);
+        assertEquals(1, membership.memberTypeId);
+        assertEquals("ACTIVE", membership.status);
+        assertEquals(0, membership.lateReturnCount);
+        assertEquals(0, membership.suspensionCount);
+        assertNull(membership.suspendedUntil);
     }
 
     @Test
@@ -311,10 +321,10 @@ public class LibraryServiceTest {
         verify(store).getMemberType(1);
         verify(store).getMembershipByPersonalNumber("19900101-1234");
         verify(store).getPerson("19900101-1234");
+        verify(store, never()).generateMemberId();
         verify(store, never()).addPerson(any());
         verify(store, never()).addMembership(any());
     }
-
     // ---------- suspendMember ----------
 
     @Test

@@ -100,6 +100,40 @@ public class DbLibraryStore implements ILibraryStore {
     }
 
     @Override
+    public List<BookTitle> searchBookTitlesByTitle(String titleQuery) {
+        String sql = """
+                SELECT isbn, title, author, publish_year
+                FROM book_title
+                WHERE title LIKE ?
+                ORDER BY title
+                """;
+
+        List<BookTitle> results = new ArrayList<>();
+
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, "%" + titleQuery + "%");
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    results.add(new BookTitle(
+                            rs.getString("isbn"),
+                            rs.getString("title"),
+                            rs.getString("author"),
+                            rs.getInt("publish_year")
+                    ));
+                }
+            }
+
+            return results;
+        } catch (SQLException e) {
+            logger.error("Could not search book titles.", e);
+            throw new RuntimeException("Could not search book titles.", e);
+        }
+    }
+
+    @Override
     public void removeBookTitle(String isbn) {
         String sql = """
                 DELETE FROM book_title
@@ -342,34 +376,36 @@ public class DbLibraryStore implements ILibraryStore {
             throw new RuntimeException("Could not block person.", e);
         }
     }
-
     @Override
     public void addMembership(Membership membership) {
-        logger.info("Saving membership. personalNumber={}, memberTypeId={}", membership.personalNumber, membership.memberTypeId);
+        logger.info("Saving membership. memberId={}, personalNumber={}, memberTypeId={}",
+                membership.memberId, membership.personalNumber, membership.memberTypeId);
+
         String sql = """
-        INSERT INTO membership
-        (member_id, personal_number, member_type_id, suspended_until, status, late_return_count, suspension_count)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        """;
+            INSERT INTO membership (
+                member_id,
+                personal_number,
+                member_type_id,
+                suspended_until,
+                status,
+                late_return_count,
+                suspension_count
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """;
 
         try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, membership.personalNumber);
             stmt.setInt(1, membership.memberId);
-            stmt.setDate(3, toSqlDate(membership.suspendedUntil));
-            stmt.setString(4, membership.status);
-            stmt.setInt(5, membership.lateReturnCount);
-            stmt.setInt(6, membership.suspensionCount);
+            stmt.setString(2, membership.personalNumber);
+            stmt.setInt(3, membership.memberTypeId);
+            stmt.setDate(4, toSqlDate(membership.suspendedUntil));
+            stmt.setString(5, membership.status);
+            stmt.setInt(6, membership.lateReturnCount);
+            stmt.setInt(7, membership.suspensionCount);
 
             stmt.executeUpdate();
-
-            try (ResultSet keys = stmt.getGeneratedKeys()) {
-                if (keys.next()) {
-                    membership.memberId = keys.getInt(1);
-                    logger.info("Membership saved successfully. memberId={}", membership.memberId);
-                }
-            }
         } catch (SQLException e) {
             logger.error("Could not add membership.", e);
             throw new RuntimeException("Could not add membership.", e);
@@ -379,17 +415,17 @@ public class DbLibraryStore implements ILibraryStore {
     @Override
     public Membership getMembership(int memberId) {
         String sql = """
-                SELECT
-                    member_id,
-                    personal_number,
-                    member_type_id,
-                    suspended_until,
-                    status,
-                    late_return_count,
-                    suspension_count
-                FROM membership
-                WHERE member_id = ?
-                """;
+            SELECT
+                member_id,
+                personal_number,
+                member_type_id,
+                suspended_until,
+                status,
+                late_return_count,
+                suspension_count
+            FROM membership
+            WHERE member_id = ?
+            """;
 
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -419,17 +455,17 @@ public class DbLibraryStore implements ILibraryStore {
     @Override
     public Membership getMembershipByPersonalNumber(String personalNumber) {
         String sql = """
-                SELECT
-                    member_id,
-                    personal_number,
-                    member_type_id,
-                    suspended_until,
-                    status,
-                    late_return_count,
-                    suspension_count
-                FROM membership
-                WHERE personal_number = ?
-                """;
+            SELECT
+                member_id,
+                personal_number,
+                member_type_id,
+                suspended_until,
+                status,
+                late_return_count,
+                suspension_count
+            FROM membership
+            WHERE personal_number = ?
+            """;
 
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -459,16 +495,17 @@ public class DbLibraryStore implements ILibraryStore {
     @Override
     public void updateMembership(Membership membership) {
         logger.info("Updating membership. memberId={}, status={}", membership.memberId, membership.status);
+
         String sql = """
-                UPDATE membership
-                SET personal_number = ?,
-                    member_type_id = ?,
-                    suspended_until = ?,
-                    status = ?,
-                    late_return_count = ?,
-                    suspension_count = ?
-                WHERE member_id = ?
-                """;
+            UPDATE membership
+            SET personal_number = ?,
+                member_type_id = ?,
+                suspended_until = ?,
+                status = ?,
+                late_return_count = ?,
+                suspension_count = ?
+            WHERE member_id = ?
+            """;
 
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -491,10 +528,11 @@ public class DbLibraryStore implements ILibraryStore {
     @Override
     public void removeMembership(int memberId) {
         logger.info("Removing membership. memberId={}", memberId);
+
         String sql = """
-                DELETE FROM membership
-                WHERE member_id = ?
-                """;
+            DELETE FROM membership
+            WHERE member_id = ?
+            """;
 
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -506,9 +544,15 @@ public class DbLibraryStore implements ILibraryStore {
             throw new RuntimeException("Could not remove membership.", e);
         }
     }
+
     @Override
     public int generateMemberId() {
-        String sql = "SELECT member_id FROM membership ORDER BY member_id";
+        String sql = """
+            SELECT member_id
+            FROM membership
+            WHERE member_id BETWEEN 1000 AND 9999
+            ORDER BY member_id
+            """;
 
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
@@ -525,7 +569,7 @@ public class DbLibraryStore implements ILibraryStore {
 
                 if (actual == expected) {
                     expected++;
-                } else if (actual > expected) {
+                } else {
                     return expected;
                 }
             }
@@ -536,6 +580,7 @@ public class DbLibraryStore implements ILibraryStore {
 
             throw new RuntimeException("No available member IDs left.");
         } catch (SQLException e) {
+            logger.error("Could not generate member ID.", e);
             throw new RuntimeException("Could not generate member ID.", e);
         }
     }

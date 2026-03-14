@@ -140,7 +140,21 @@ public class Main {
             return;
         }
 
-        System.out.print("Enter book ISBN: ");
+        System.out.print("Enter book title to search: ");
+        String titleQuery = scanner.nextLine();
+
+        List<BookTitle> matches = svc.searchBookTitles(titleQuery);
+        if (matches.isEmpty()) {
+            System.out.println("No books found matching: " + titleQuery);
+            return;
+        }
+
+        System.out.println("Found " + matches.size() + " result(s):");
+        for (BookTitle b : matches) {
+            System.out.println("  ISBN: " + b.isbn + " | " + b.title + " by " + b.author + " (" + b.publishYear + ")");
+        }
+
+        System.out.print("Enter ISBN to borrow: ");
         String isbn = scanner.nextLine();
 
         boolean ok = svc.lendBook(memberId, isbn);

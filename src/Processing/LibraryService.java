@@ -304,11 +304,19 @@ public class LibraryService implements ILibraryService {
                 } else {
                     store.updateMembership(membership);
                 }
+            } else {
+                // 1st or 2nd late return — persist the updated lateReturnCount
+                store.updateMembership(membership);
+                logger.info("Late return count updated in database. memberId={}, lateReturnCount={}", memberId, membership.lateReturnCount);
             }
         }
 
         logger.info("Return completed. memberId={}, isbn={}, late={}, memberDeleted={}", memberId, isbn, wasLate, memberDeleted);
         return new ReturnResult(true, wasLate, suspendedUntil, memberDeleted, "Return completed.");
+    }
+
+    public List<BookTitle> searchBookTitles(String titleQuery) {
+        return store.searchBookTitlesByTitle(titleQuery);
     }
 
     public BookTitle getBookTitle(String isbn) {
