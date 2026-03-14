@@ -80,5 +80,6 @@
         <SOURCES />
       </library>
     </orderEntry>
+    <orderEntry type="library" exported="" name="mockito-junit-jupiter-5.23.0" level="project" />
   </component>
 </module>
