@@ -275,9 +275,9 @@ public class DbLibraryStore implements ILibraryStore {
     @Override
     public void addPerson(Person person) {
         String sql = """
-                INSERT INTO person (personal_number, first_name, last_name)
-                VALUES (?, ?, ?)
-                """;
+            INSERT INTO person (personal_number, first_name, last_name, blocked)
+            VALUES (?, ?, ?, ?)
+            """;
 
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -285,6 +285,7 @@ public class DbLibraryStore implements ILibraryStore {
             stmt.setString(1, person.personalNumber);
             stmt.setString(2, person.firstName);
             stmt.setString(3, person.lastName);
+            stmt.setBoolean(4, person.blocked);
 
             stmt.executeUpdate();
         } catch (SQLException e) {
@@ -296,10 +297,10 @@ public class DbLibraryStore implements ILibraryStore {
     @Override
     public Person getPerson(String personalNumber) {
         String sql = """
-                SELECT personal_number, first_name, last_name
-                FROM person
-                WHERE personal_number = ?
-                """;
+            SELECT personal_number, first_name, last_name, blocked
+            FROM person
+            WHERE personal_number = ?
+            """;
 
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -311,7 +312,8 @@ public class DbLibraryStore implements ILibraryStore {
                     return new Person(
                             rs.getString("personal_number"),
                             rs.getString("first_name"),
-                            rs.getString("last_name")
+                            rs.getString("last_name"),
+                            rs.getBoolean("blocked")
                     );
                 }
                 return null;
@@ -319,6 +321,25 @@ public class DbLibraryStore implements ILibraryStore {
         } catch (SQLException e) {
             logger.error("Could not fetch person.", e);
             throw new RuntimeException("Could not fetch person.", e);
+        }
+    }
+
+    @Override
+    public void blockPerson(String personalNumber) {
+        String sql = """
+            UPDATE person
+            SET blocked = TRUE
+            WHERE personal_number = ?
+            """;
+
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, personalNumber);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            logger.error("Could not block person.", e);
+            throw new RuntimeException("Could not block person.", e);
         }
     }
 

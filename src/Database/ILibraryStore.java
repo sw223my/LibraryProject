@@ -25,6 +25,7 @@ public interface ILibraryStore {
 
     void addPerson(Person person);
     Person getPerson(String personalNumber);
+    void blockPerson(String personalNumber);
 
     void addMembership(Membership membership);
     Membership getMembership(int memberId);

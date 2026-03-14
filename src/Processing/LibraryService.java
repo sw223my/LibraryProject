@@ -70,6 +70,7 @@ public class LibraryService implements ILibraryService {
 
     public String registerMember(String firstName, String lastName, String personalNumber, int memberTypeId) {
         logger.info("Register member requested. personalNumber={}, memberTypeId={}", personalNumber, memberTypeId);
+
         if (firstName == null || firstName.isBlank()) {
             throw new IllegalArgumentException("First name is required.");
         }
@@ -82,13 +83,19 @@ public class LibraryService implements ILibraryService {
 
         Membership existingMembership = store.getMembershipByPersonalNumber(personalNumber);
         if (existingMembership != null) {
-            logger.info("Register member skipped: existing membership found. personalNumber={}, memberId={}", personalNumber, existingMembership.memberId);
+            logger.info("Register member skipped: existing membership found. personalNumber={}, memberId={}",
+                    personalNumber, existingMembership.memberId);
             return String.valueOf(existingMembership.memberId);
         }
 
         Person existingPerson = store.getPerson(personalNumber);
+        if (existingPerson != null && existingPerson.blocked) {
+            logger.warn("Registration denied: person is blocked. personalNumber={}", personalNumber);
+            throw new IllegalArgumentException("Registration not allowed due to previous violations.");
+        }
+
         if (existingPerson == null) {
-            store.addPerson(new Person(personalNumber, firstName, lastName));
+            store.addPerson(new Person(personalNumber, firstName, lastName, false));
         }
 
         Membership membership = new Membership(
@@ -102,7 +109,8 @@ public class LibraryService implements ILibraryService {
         );
 
         store.addMembership(membership);
-        logger.info("Member registered successfully. personalNumber={}, memberId={}", personalNumber, membership.memberId);
+        logger.info("Member registered successfully. personalNumber={}, memberId={}",
+                personalNumber, membership.memberId);
 
         return String.valueOf(membership.memberId);
     }

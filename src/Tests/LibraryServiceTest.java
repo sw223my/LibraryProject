@@ -248,6 +248,22 @@ public class LibraryServiceTest {
         verify(store).addMembership(any(Membership.class));
     }
 
+    @Test
+    void registerMember_shouldThrow_whenPersonIsBlocked() {
+        when(store.getMembershipByPersonalNumber("19900101-1234")).thenReturn(null);
+        when(store.getPerson("19900101-1234"))
+                .thenReturn(new Person("19900101-1234", "John", "Doe", true));
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.registerMember("John", "Doe", "19900101-1234", 1)
+        );
+
+        assertEquals("Registration not allowed due to previous violations.", ex.getMessage());
+        verify(store, never()).addPerson(any());
+        verify(store, never()).addMembership(any());
+    }
+
     // ---------- suspendMember ----------
 
     @Test
