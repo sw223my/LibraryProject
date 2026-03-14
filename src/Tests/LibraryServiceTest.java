@@ -9,27 +9,29 @@ import Objects.Membership;
 import Objects.Person;
 import Objects.Suspension;
 import Processing.LibraryService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 public class LibraryServiceTest {
 
+    @Mock
     private ILibraryStore store;
-    private LibraryService service;
 
-    @BeforeEach
-    void setUp() {
-        store = mock(ILibraryStore.class);
-        service = new LibraryService(store);
-    }
+    @InjectMocks
+    private LibraryService service;
 
     // ---------- addBookTitle ----------
 
@@ -148,7 +150,7 @@ public class LibraryServiceTest {
         verify(store).removeBookTitle("123");
     }
 
-// ---------- registerMember ----------
+    // ---------- registerMember ----------
 
     @Test
     void registerMember_shouldThrow_whenFirstNameBlank() {

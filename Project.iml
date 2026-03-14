@@ -9,10 +9,10 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" exported="" name="junit.jupiter" level="project" />
-    <orderEntry type="library" exported="" name="byte-buddy-1.9.12" level="project" />
-    <orderEntry type="library" exported="" name="byte-buddy-agent-1.9.12" level="project" />
-    <orderEntry type="library" exported="" name="mockito-core-2.25.7" level="project" />
-    <orderEntry type="library" exported="" name="objenesis-3.0.1" level="project" />
+    <orderEntry type="library" name="byte-buddy-1.9.12" level="project" />
+    <orderEntry type="library" name="byte-buddy-agent-1.9.12" level="project" />
+    <orderEntry type="library" name="mockito-core-2.25.7" level="project" />
+    <orderEntry type="library" name="objenesis-3.0.1" level="project" />
     <orderEntry type="library" exported="" name="log4j-api-2.11.2" level="project" />
     <orderEntry type="library" exported="" name="log4j-core-2.11.2" level="project" />
     <orderEntry type="module-library">
@@ -69,6 +69,15 @@
         <JAVADOC />
         <SOURCES />
         <jarDirectory url="file://$MODULE_DIR$/../Project" recursive="false" />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library>
+        <CLASSES>
+          <root url="jar://$USER_HOME$/Downloads/mockito-junit-jupiter-5.23.0-javadoc.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
       </library>
     </orderEntry>
   </component>
