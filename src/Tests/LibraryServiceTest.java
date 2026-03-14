@@ -148,7 +148,7 @@ public class LibraryServiceTest {
         verify(store).removeBookTitle("123");
     }
 
-    // ---------- registerMember ----------
+// ---------- registerMember ----------
 
     @Test
     void registerMember_shouldThrow_whenFirstNameBlank() {
@@ -158,6 +158,11 @@ public class LibraryServiceTest {
         );
 
         assertEquals("First name is required.", ex.getMessage());
+        verify(store, never()).getMemberType(anyInt());
+        verify(store, never()).getMembershipByPersonalNumber(anyString());
+        verify(store, never()).getPerson(anyString());
+        verify(store, never()).addPerson(any());
+        verify(store, never()).addMembership(any());
     }
 
     @Test
@@ -168,6 +173,11 @@ public class LibraryServiceTest {
         );
 
         assertEquals("Last name is required.", ex.getMessage());
+        verify(store, never()).getMemberType(anyInt());
+        verify(store, never()).getMembershipByPersonalNumber(anyString());
+        verify(store, never()).getPerson(anyString());
+        verify(store, never()).addPerson(any());
+        verify(store, never()).addMembership(any());
     }
 
     @Test
@@ -178,88 +188,9 @@ public class LibraryServiceTest {
         );
 
         assertEquals("Personal number is required.", ex.getMessage());
-    }
-
-    @Test
-    void registerMember_shouldReturnExistingId_whenAlreadyRegistered() {
-        Membership existing = new Membership(1001, "19900101-1234", 1, null, "ACTIVE", 0, 0);
-        when(store.getMembershipByPersonalNumber("19900101-1234")).thenReturn(existing);
-
-        String result = service.registerMember("John", "Doe", "19900101-1234", 1);
-
-        assertEquals("1001", result);
+        verify(store, never()).getMemberType(anyInt());
+        verify(store, never()).getMembershipByPersonalNumber(anyString());
         verify(store, never()).getPerson(anyString());
-        verify(store, never()).addPerson(any());
-        verify(store, never()).addMembership(any());
-    }
-
-    @Test
-    void registerMember_shouldCreatePersonAndMembership_whenPersonAndMembershipDoNotExist() {
-        when(store.getMembershipByPersonalNumber("19900101-1234")).thenReturn(null);
-        when(store.getPerson("19900101-1234")).thenReturn(null);
-
-        doAnswer(invocation -> {
-            Membership membership = invocation.getArgument(0);
-            membership.memberId = 1000; // simulate AUTO_INCREMENT from DB
-            return null;
-        }).when(store).addMembership(any(Membership.class));
-
-        String result = service.registerMember("John", "Doe", "19900101-1234", 2);
-
-        assertEquals("1000", result);
-
-        ArgumentCaptor<Person> personCaptor = ArgumentCaptor.forClass(Person.class);
-        ArgumentCaptor<Membership> membershipCaptor = ArgumentCaptor.forClass(Membership.class);
-
-        verify(store).addPerson(personCaptor.capture());
-        verify(store).addMembership(membershipCaptor.capture());
-
-        Person person = personCaptor.getValue();
-        assertEquals("19900101-1234", person.personalNumber);
-        assertEquals("John", person.firstName);
-        assertEquals("Doe", person.lastName);
-
-        Membership membership = membershipCaptor.getValue();
-        assertEquals(1000, membership.memberId);
-        assertEquals("19900101-1234", membership.personalNumber);
-        assertEquals(2, membership.memberTypeId);
-        assertEquals("ACTIVE", membership.status);
-        assertEquals(0, membership.lateReturnCount);
-        assertEquals(0, membership.suspensionCount);
-        assertNull(membership.suspendedUntil);
-    }
-
-    @Test
-    void registerMember_shouldNotCreatePersonAgain_whenPersonExistsButMembershipDoesNot() {
-        when(store.getMembershipByPersonalNumber("19900101-1234")).thenReturn(null);
-        when(store.getPerson("19900101-1234"))
-                .thenReturn(new Person("19900101-1234", "John", "Doe"));
-
-        doAnswer(invocation -> {
-            Membership membership = invocation.getArgument(0);
-            membership.memberId = 1002;
-            return null;
-        }).when(store).addMembership(any(Membership.class));
-
-        String result = service.registerMember("John", "Doe", "19900101-1234", 1);
-
-        assertEquals("1002", result);
-        verify(store, never()).addPerson(any());
-        verify(store).addMembership(any(Membership.class));
-    }
-
-    @Test
-    void registerMember_shouldThrow_whenPersonIsBlocked() {
-        when(store.getMembershipByPersonalNumber("19900101-1234")).thenReturn(null);
-        when(store.getPerson("19900101-1234"))
-                .thenReturn(new Person("19900101-1234", "John", "Doe", true));
-
-        IllegalArgumentException ex = assertThrows(
-                IllegalArgumentException.class,
-                () -> service.registerMember("John", "Doe", "19900101-1234", 1)
-        );
-
-        assertEquals("Registration not allowed due to previous violations.", ex.getMessage());
         verify(store, never()).addPerson(any());
         verify(store, never()).addMembership(any());
     }
@@ -274,8 +205,110 @@ public class LibraryServiceTest {
         );
 
         assertEquals("Invalid member type.", ex.getMessage());
+        verify(store).getMemberType(99);
         verify(store, never()).getMembershipByPersonalNumber(anyString());
         verify(store, never()).getPerson(anyString());
+        verify(store, never()).addPerson(any());
+        verify(store, never()).addMembership(any());
+    }
+
+    @Test
+    void registerMember_shouldReturnExistingId_whenAlreadyRegistered() {
+        when(store.getMemberType(1)).thenReturn(new MemberType(1, "Undergraduate", 3));
+
+        Membership existing = new Membership(1001, "19900101-1234", 1, null, "ACTIVE", 0, 0);
+        when(store.getMembershipByPersonalNumber("19900101-1234")).thenReturn(existing);
+
+        String result = service.registerMember("John", "Doe", "19900101-1234", 1);
+
+        assertEquals("1001", result);
+        verify(store).getMemberType(1);
+        verify(store).getMembershipByPersonalNumber("19900101-1234");
+        verify(store, never()).getPerson(anyString());
+        verify(store, never()).addPerson(any());
+        verify(store, never()).addMembership(any());
+    }
+
+    @Test
+    void registerMember_shouldCreatePersonAndMembership_whenPersonAndMembershipDoNotExist() {
+        when(store.getMemberType(2)).thenReturn(new MemberType(2, "Postgraduate", 5));
+        when(store.getMembershipByPersonalNumber("19900101-1234")).thenReturn(null);
+        when(store.getPerson("19900101-1234")).thenReturn(null);
+
+        doAnswer(invocation -> {
+            Membership membership = invocation.getArgument(0);
+            membership.memberId = 1000;
+            return null;
+        }).when(store).addMembership(any(Membership.class));
+
+        String result = service.registerMember("John", "Doe", "19900101-1234", 2);
+
+        assertEquals("1000", result);
+
+        ArgumentCaptor<Person> personCaptor = ArgumentCaptor.forClass(Person.class);
+        ArgumentCaptor<Membership> membershipCaptor = ArgumentCaptor.forClass(Membership.class);
+
+        verify(store).getMemberType(2);
+        verify(store).getMembershipByPersonalNumber("19900101-1234");
+        verify(store).getPerson("19900101-1234");
+        verify(store).addPerson(personCaptor.capture());
+        verify(store).addMembership(membershipCaptor.capture());
+
+        Person person = personCaptor.getValue();
+        assertEquals("19900101-1234", person.personalNumber);
+        assertEquals("John", person.firstName);
+        assertEquals("Doe", person.lastName);
+        assertFalse(person.blocked);
+
+        Membership membership = membershipCaptor.getValue();
+        assertEquals(1000, membership.memberId);
+        assertEquals("19900101-1234", membership.personalNumber);
+        assertEquals(2, membership.memberTypeId);
+        assertEquals("ACTIVE", membership.status);
+        assertEquals(0, membership.lateReturnCount);
+        assertEquals(0, membership.suspensionCount);
+        assertNull(membership.suspendedUntil);
+    }
+
+    @Test
+    void registerMember_shouldNotCreatePersonAgain_whenPersonExistsButMembershipDoesNot() {
+        when(store.getMemberType(1)).thenReturn(new MemberType(1, "Undergraduate", 3));
+        when(store.getMembershipByPersonalNumber("19900101-1234")).thenReturn(null);
+        when(store.getPerson("19900101-1234"))
+                .thenReturn(new Person("19900101-1234", "John", "Doe", false));
+
+        doAnswer(invocation -> {
+            Membership membership = invocation.getArgument(0);
+            membership.memberId = 1002;
+            return null;
+        }).when(store).addMembership(any(Membership.class));
+
+        String result = service.registerMember("John", "Doe", "19900101-1234", 1);
+
+        assertEquals("1002", result);
+        verify(store).getMemberType(1);
+        verify(store).getMembershipByPersonalNumber("19900101-1234");
+        verify(store).getPerson("19900101-1234");
+        verify(store, never()).addPerson(any());
+        verify(store).addMembership(any(Membership.class));
+    }
+
+    @Test
+    void registerMember_shouldThrow_whenPersonIsBlocked() {
+        when(store.getMemberType(1)).thenReturn(new MemberType(1, "Undergraduate", 3));
+        when(store.getMembershipByPersonalNumber("19900101-1234")).thenReturn(null);
+        when(store.getPerson("19900101-1234"))
+                .thenReturn(new Person("19900101-1234", "John", "Doe", true));
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.registerMember("John", "Doe", "19900101-1234", 1)
+        );
+
+        assertEquals("Registration not allowed due to previous violations.", ex.getMessage());
+        verify(store).getMemberType(1);
+        verify(store).getMembershipByPersonalNumber("19900101-1234");
+        verify(store).getPerson("19900101-1234");
         verify(store, never()).addPerson(any());
         verify(store, never()).addMembership(any());
     }
