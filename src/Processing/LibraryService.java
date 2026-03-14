@@ -286,13 +286,15 @@ public class LibraryService implements ILibraryService {
                 logger.warn("Member suspended after repeated late returns. memberId={}, suspendedUntil={}", memberId, suspendedUntil);
 
                 if (membership.suspensionCount > 2) {
-                    memberDeleted = deleteMember(memberId);
-                    logger.warn("Member exceeded suspension limit. memberId={}, deleted={}", memberId, memberDeleted);
+                    store.blockPerson(membership.personalNumber);
+                    store.removeMembership(memberId);
+                    memberDeleted = true;
+
+                    logger.warn("Member exceeded suspension limit and was blocked. memberId={}, personalNumber={}",
+                            memberId, membership.personalNumber);
                 } else {
                     store.updateMembership(membership);
                 }
-            } else {
-                store.updateMembership(membership);
             }
         }
 
