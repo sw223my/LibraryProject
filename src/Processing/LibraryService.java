@@ -81,6 +81,12 @@ public class LibraryService implements ILibraryService {
             throw new IllegalArgumentException("Personal number is required.");
         }
 
+        MemberType memberType = store.getMemberType(memberTypeId);
+        if (memberType == null) {
+            logger.warn("Registration denied: invalid member type. memberTypeId={}", memberTypeId);
+            throw new IllegalArgumentException("Invalid member type.");
+        }
+
         Membership existingMembership = store.getMembershipByPersonalNumber(personalNumber);
         if (existingMembership != null) {
             logger.info("Register member skipped: existing membership found. personalNumber={}, memberId={}",
@@ -101,7 +107,7 @@ public class LibraryService implements ILibraryService {
         Membership membership = new Membership(
                 0,
                 personalNumber,
-                memberTypeId,
+                memberType.memberTypeId,
                 null,
                 "ACTIVE",
                 0,

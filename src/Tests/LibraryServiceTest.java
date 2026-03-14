@@ -264,6 +264,22 @@ public class LibraryServiceTest {
         verify(store, never()).addMembership(any());
     }
 
+    @Test
+    void registerMember_shouldThrow_whenMemberTypeDoesNotExist() {
+        when(store.getMemberType(99)).thenReturn(null);
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.registerMember("John", "Doe", "19900101-1234", 99)
+        );
+
+        assertEquals("Invalid member type.", ex.getMessage());
+        verify(store, never()).getMembershipByPersonalNumber(anyString());
+        verify(store, never()).getPerson(anyString());
+        verify(store, never()).addPerson(any());
+        verify(store, never()).addMembership(any());
+    }
+
     // ---------- suspendMember ----------
 
     @Test
