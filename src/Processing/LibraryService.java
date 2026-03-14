@@ -104,8 +104,10 @@ public class LibraryService implements ILibraryService {
             store.addPerson(new Person(personalNumber, firstName, lastName, false));
         }
 
+        int memberId = store.generateMemberId();
+
         Membership membership = new Membership(
-                0,
+                memberId,
                 personalNumber,
                 memberType.memberTypeId,
                 null,
@@ -115,6 +117,7 @@ public class LibraryService implements ILibraryService {
         );
 
         store.addMembership(membership);
+
         logger.info("Member registered successfully. personalNumber={}, memberId={}",
                 personalNumber, membership.memberId);
 

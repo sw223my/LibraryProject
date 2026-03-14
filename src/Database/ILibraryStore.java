@@ -32,6 +32,7 @@ public interface ILibraryStore {
     Membership getMembershipByPersonalNumber(String personalNumber);
     void updateMembership(Membership membership);
     void removeMembership(int memberId);
+    int generateMemberId();
 
     MemberType getMemberType(int memberTypeId);
     List<MemberType> getAllMemberTypes();

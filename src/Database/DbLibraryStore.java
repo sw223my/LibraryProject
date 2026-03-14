@@ -347,22 +347,16 @@ public class DbLibraryStore implements ILibraryStore {
     public void addMembership(Membership membership) {
         logger.info("Saving membership. personalNumber={}, memberTypeId={}", membership.personalNumber, membership.memberTypeId);
         String sql = """
-                INSERT INTO membership (
-                    personal_number,
-                    member_type_id,
-                    suspended_until,
-                    status,
-                    late_return_count,
-                    suspension_count
-                )
-                VALUES (?, ?, ?, ?, ?, ?)
-                """;
+        INSERT INTO membership
+        (member_id, personal_number, member_type_id, suspended_until, status, late_return_count, suspension_count)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """;
 
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             stmt.setString(1, membership.personalNumber);
-            stmt.setInt(2, membership.memberTypeId);
+            stmt.setInt(1, membership.memberId);
             stmt.setDate(3, toSqlDate(membership.suspendedUntil));
             stmt.setString(4, membership.status);
             stmt.setInt(5, membership.lateReturnCount);
@@ -510,6 +504,39 @@ public class DbLibraryStore implements ILibraryStore {
         } catch (SQLException e) {
             logger.error("Could not remove membership.", e);
             throw new RuntimeException("Could not remove membership.", e);
+        }
+    }
+    @Override
+    public int generateMemberId() {
+        String sql = "SELECT member_id FROM membership ORDER BY member_id";
+
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            int expected = 1000;
+
+            while (rs.next() && expected <= 9999) {
+                int actual = rs.getInt("member_id");
+
+                if (actual < expected) {
+                    continue;
+                }
+
+                if (actual == expected) {
+                    expected++;
+                } else if (actual > expected) {
+                    return expected;
+                }
+            }
+
+            if (expected <= 9999) {
+                return expected;
+            }
+
+            throw new RuntimeException("No available member IDs left.");
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not generate member ID.", e);
         }
     }
 
