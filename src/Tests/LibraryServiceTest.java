@@ -581,7 +581,7 @@ public class LibraryServiceTest {
     }
 
     @Test
-    void returnBook_shouldDeleteMember_whenSuspensionCountExceedsTwo() {
+    void returnBook_shouldBlockPersonAndRemoveMembership_whenSuspensionCountExceedsTwo() {
         Membership membership = new Membership(1000, "19900101-1234", 1, null, "ACTIVE", 2, 2);
         Date oldDate = new Date(System.currentTimeMillis() - 10L * 24 * 60 * 60 * 1000);
         Date pastDue = new Date(System.currentTimeMillis() - 2L * 24 * 60 * 60 * 1000);
@@ -594,15 +594,26 @@ public class LibraryServiceTest {
         when(store.getBookTitle("123")).thenReturn(title);
         when(store.getActiveLoan(1000, "123")).thenReturn(loan);
         when(store.getBookCopies("123")).thenReturn(List.of(copy));
-        when(store.getLoansForMember(1000)).thenReturn(Collections.emptyList());
 
         LibraryService.ReturnResult result = service.returnBook(1000, "123");
 
         assertTrue(result.success);
         assertTrue(result.late);
         assertTrue(result.memberDeleted);
+        assertNotNull(result.suspendedUntil);
 
+        assertEquals(3, membership.lateReturnCount);
+        assertEquals(3, membership.suspensionCount);
+        assertEquals("SUSPENDED", membership.status);
+        assertEquals("AVAILABLE", copy.status);
+        assertNotNull(loan.returnDate);
+
+        verify(store).updateLoan(loan);
+        verify(store).updateBookCopy(copy);
+        verify(store).addSuspension(any(Suspension.class));
+        verify(store).blockPerson("19900101-1234");
         verify(store).removeMembership(1000);
+        verify(store, never()).updateMembership(any());
     }
 
     // ---------- getters ----------
