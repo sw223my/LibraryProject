@@ -512,7 +512,7 @@ public class LibraryServiceTest {
         boolean result = service.deleteMember(1000);
 
         assertTrue(result);
-        verify(store).blockPerson("19900101-1234");
+        verify(store).blockPerson("20050713-1234");
         verify(store).removeMembership(1000);
     }
 
