@@ -513,7 +513,7 @@ public class LibraryServiceTest {
     void lendBook_shouldThrow_whenIsbnIsNotSixDigits() {
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
-                () -> service.lendBook(1000, "12345")
+                () -> service.lendBook(1000, "123456")
         );
 
         assertEquals("ISBN must be exactly 6 digits.", ex.getMessage());
@@ -647,6 +647,29 @@ public class LibraryServiceTest {
         assertNull(loan.returnDate);
     }
 
+    @Test
+    void lendBook_shouldReactivateMember_whenSuspensionHasExpired() {
+        Date yesterday = new Date(System.currentTimeMillis() - 24L * 60 * 60 * 1000);
+        Membership membership = new Membership(1000, "19900101-1234", 1, yesterday, "SUSPENDED", 0, 1);
+        BookTitle title = new BookTitle("123456", "Java", "Author", 2020);
+        MemberType type = new MemberType(1, "Student", 5);
+        BookCopy copy = new BookCopy(7, "123456", "AVAILABLE");
+
+        when(store.getMembership(1000)).thenReturn(membership);
+        when(store.getBookTitle("123456")).thenReturn(title);
+        when(store.getMemberType(1)).thenReturn(type);
+        when(store.getLoansForMember(1000)).thenReturn(Collections.emptyList());
+        when(store.getActiveLoan(1000, "123456")).thenReturn(null);
+        when(store.getAvailableBookCopy("123456")).thenReturn(copy);
+
+        boolean result = service.lendBook(1000, "123456");
+
+        assertTrue(result);
+        assertEquals("ACTIVE", membership.status);
+        assertNull(membership.suspendedUntil);
+        verify(store).updateMembership(membership);
+    }
+
     // ---------- returnBook ----------
 
     @Test
@@ -664,7 +687,7 @@ public class LibraryServiceTest {
     void returnBook_shouldThrow_whenIsbnIsNotSixDigits() {
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
-                () -> service.returnBook(1000, "12345")
+                () -> service.returnBook(1000, "123456")
         );
 
         assertEquals("ISBN must be exactly 6 digits.", ex.getMessage());
@@ -868,5 +891,33 @@ public class LibraryServiceTest {
 
         assertEquals(loans, result);
         verify(store).getLoansForMember(1000);
+    }
+
+    @Test
+    void getMembership_shouldReactivateMember_whenSuspensionHasExpired() {
+        Date yesterday = new Date(System.currentTimeMillis() - 24L * 60 * 60 * 1000);
+        Membership membership = new Membership(1000, "19900101-1234", 1, yesterday, "SUSPENDED", 0, 1);
+
+        when(store.getMembership(1000)).thenReturn(membership);
+
+        Membership result = service.getMembership(1000);
+
+        assertEquals("ACTIVE", result.status);
+        assertNull(result.suspendedUntil);
+        verify(store).updateMembership(membership);
+    }
+
+    @Test
+    void getMembership_shouldKeepSuspendedStatus_whenSuspensionIsStillActive() {
+        Date tomorrow = new Date(System.currentTimeMillis() + 24L * 60 * 60 * 1000);
+        Membership membership = new Membership(1000, "19900101-1234", 1, tomorrow, "ACTIVE", 0, 1);
+
+        when(store.getMembership(1000)).thenReturn(membership);
+
+        Membership result = service.getMembership(1000);
+
+        assertEquals("SUSPENDED", result.status);
+        assertEquals(tomorrow, result.suspendedUntil);
+        verify(store).updateMembership(membership);
     }
 }
