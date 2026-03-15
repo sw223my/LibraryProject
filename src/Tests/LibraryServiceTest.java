@@ -9,6 +9,7 @@ import Objects.Membership;
 import Objects.Person;
 import Objects.Suspension;
 import Processing.LibraryService;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -48,10 +49,36 @@ public class LibraryServiceTest {
     }
 
     @Test
+    void addBookTitle_shouldThrow_whenIsbnNotSixDigits() {
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.addBookTitle("12345", "Title", "Author", 2020, 1)
+        );
+
+        assertEquals("ISBN must be exactly 6 digits.", ex.getMessage());
+        verify(store, never()).getBookTitle(anyString());
+        verify(store, never()).addBookTitle(any());
+        verify(store, never()).addBookCopies(anyString(), anyInt());
+    }
+
+    @Test
+    void addBookTitle_shouldThrow_whenIsbnContainsLetters() {
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.addBookTitle("12A456", "Title", "Author", 2020, 1)
+        );
+
+        assertEquals("ISBN must be exactly 6 digits.", ex.getMessage());
+        verify(store, never()).getBookTitle(anyString());
+        verify(store, never()).addBookTitle(any());
+        verify(store, never()).addBookCopies(anyString(), anyInt());
+    }
+
+    @Test
     void addBookTitle_shouldThrow_whenTitleIsBlank() {
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
-                () -> service.addBookTitle("123", " ", "Author", 2020, 1)
+                () -> service.addBookTitle("123456", " ", "Author", 2020, 1)
         );
 
         assertEquals("Title is required.", ex.getMessage());
@@ -63,7 +90,7 @@ public class LibraryServiceTest {
     void addBookTitle_shouldThrow_whenCopiesInvalid() {
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
-                () -> service.addBookTitle("123", "Title", "Author", 2020, 0)
+                () -> service.addBookTitle("123456", "Title", "Author", 2020, 0)
         );
 
         assertEquals("Copies must be at least 1.", ex.getMessage());
@@ -73,12 +100,12 @@ public class LibraryServiceTest {
 
     @Test
     void addBookTitle_shouldThrow_whenBookTitleAlreadyExists() {
-        when(store.getBookTitle("123"))
-                .thenReturn(new BookTitle("123", "Old", "Author", 2020));
+        when(store.getBookTitle("123456"))
+                .thenReturn(new BookTitle("123456", "Old", "Author", 2020));
 
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
-                () -> service.addBookTitle("123", "New", "Author", 2024, 2)
+                () -> service.addBookTitle("123456", "New", "Author", 2024, 2)
         );
 
         assertEquals("A book title with this ISBN already exists.", ex.getMessage());
@@ -88,16 +115,16 @@ public class LibraryServiceTest {
 
     @Test
     void addBookTitle_shouldAddBookTitleAndCopies_whenValid() {
-        when(store.getBookTitle("123")).thenReturn(null);
+        when(store.getBookTitle("123456")).thenReturn(null);
 
-        service.addBookTitle("123", "Clean Code", "Robert Martin", 2008, 3);
+        service.addBookTitle("123456", "Clean Code", "Robert Martin", 2008, 3);
 
         ArgumentCaptor<BookTitle> captor = ArgumentCaptor.forClass(BookTitle.class);
         verify(store).addBookTitle(captor.capture());
-        verify(store).addBookCopies("123", 3);
+        verify(store).addBookCopies("123456", 3);
 
         BookTitle added = captor.getValue();
-        assertEquals("123", added.isbn);
+        assertEquals("123456", added.isbn);
         assertEquals("Clean Code", added.title);
         assertEquals("Robert Martin", added.author);
         assertEquals(2008, added.publishYear);
@@ -106,10 +133,23 @@ public class LibraryServiceTest {
     // ---------- deleteBookTitle ----------
 
     @Test
-    void deleteBookTitle_shouldReturnFalse_whenBookDoesNotExist() {
-        when(store.getBookTitle("123")).thenReturn(null);
+    void deleteBookTitle_shouldThrow_whenIsbnNotSixDigits() {
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.deleteBookTitle("12345")
+        );
 
-        boolean result = service.deleteBookTitle("123");
+        assertEquals("ISBN must be exactly 6 digits.", ex.getMessage());
+        verify(store, never()).getBookTitle(anyString());
+        verify(store, never()).removeBookCopiesByIsbn(anyString());
+        verify(store, never()).removeBookTitle(anyString());
+    }
+
+    @Test
+    void deleteBookTitle_shouldReturnFalse_whenBookDoesNotExist() {
+        when(store.getBookTitle("123456")).thenReturn(null);
+
+        boolean result = service.deleteBookTitle("123456");
 
         assertFalse(result);
         verify(store, never()).removeBookCopiesByIsbn(anyString());
@@ -118,39 +158,38 @@ public class LibraryServiceTest {
 
     @Test
     void deleteBookTitle_shouldReturnFalse_whenActiveLoanExists() {
-        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
+        BookTitle title = new BookTitle("123456", "Java", "Author", 2020);
         Loan activeLoan = mock(Loan.class);
 
-        when(store.getBookTitle("123")).thenReturn(title);
-        when(store.getLoansForBook("123")).thenReturn(List.of(activeLoan));
+        when(store.getBookTitle("123456")).thenReturn(title);
+        when(store.getLoansForBook("123456")).thenReturn(List.of(activeLoan));
         when(activeLoan.isActive()).thenReturn(true);
 
-        boolean result = service.deleteBookTitle("123");
+        boolean result = service.deleteBookTitle("123456");
 
         assertFalse(result);
-        verify(store, never()).removeBookCopiesByIsbn("123");
-        verify(store, never()).removeBookTitle("123");
+        verify(store, never()).removeBookCopiesByIsbn("123456");
+        verify(store, never()).removeBookTitle("123456");
     }
 
     @Test
     void deleteBookTitle_shouldRemoveBookTitleAndCopies_whenNoActiveLoansExist() {
-        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
+        BookTitle title = new BookTitle("123456", "Java", "Author", 2020);
         Loan loan1 = mock(Loan.class);
         Loan loan2 = mock(Loan.class);
 
-        when(store.getBookTitle("123")).thenReturn(title);
-        when(store.getLoansForBook("123")).thenReturn(List.of(loan1, loan2));
+        when(store.getBookTitle("123456")).thenReturn(title);
+        when(store.getLoansForBook("123456")).thenReturn(List.of(loan1, loan2));
         when(loan1.isActive()).thenReturn(false);
         when(loan2.isActive()).thenReturn(false);
 
-        boolean result = service.deleteBookTitle("123");
+        boolean result = service.deleteBookTitle("123456");
 
         assertTrue(result);
-        verify(store).removeBookCopiesByIsbn("123");
-        verify(store).removeBookTitle("123");
+        verify(store).removeBookCopiesByIsbn("123456");
+        verify(store).removeBookTitle("123456");
     }
 
-    // ---------- registerMember ----------
     // ---------- registerMember ----------
 
     @Test
@@ -325,7 +364,38 @@ public class LibraryServiceTest {
         verify(store, never()).addPerson(any());
         verify(store, never()).addMembership(any());
     }
+
+    @Test
+    void registerMember_shouldThrow_whenGeneratedMemberIdIsNotFourDigits() {
+        when(store.getMemberType(1)).thenReturn(new MemberType(1, "Undergraduate", 3));
+        when(store.getMembershipByPersonalNumber("19900101-1234")).thenReturn(null);
+        when(store.getPerson("19900101-1234")).thenReturn(null);
+        when(store.generateMemberId()).thenReturn(999);
+
+        IllegalStateException ex = assertThrows(
+                IllegalStateException.class,
+                () -> service.registerMember("John", "Doe", "19900101-1234", 1)
+        );
+
+        assertEquals("Generated member ID must be a 4-digit number.", ex.getMessage());
+        verify(store).generateMemberId();
+        verify(store, never()).addMembership(any());
+    }
+
     // ---------- suspendMember ----------
+
+    @Test
+    void suspendMember_shouldThrow_whenMemberIdIsNotFourDigits() {
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.suspendMember(999, 10)
+        );
+
+        assertEquals("Member ID must be a 4-digit number.", ex.getMessage());
+        verify(store, never()).getMembership(anyInt());
+        verify(store, never()).updateMembership(any());
+        verify(store, never()).addSuspension(any());
+    }
 
     @Test
     void suspendMember_shouldReturnFalse_whenMemberDoesNotExist() {
@@ -376,6 +446,17 @@ public class LibraryServiceTest {
     // ---------- deleteMember ----------
 
     @Test
+    void deleteMember_shouldThrow_whenMemberIdIsNotFourDigits() {
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.deleteMember(10000)
+        );
+
+        assertEquals("Member ID must be a 4-digit number.", ex.getMessage());
+        verify(store, never()).getMembership(anyInt());
+    }
+
+    @Test
     void deleteMember_shouldReturnFalse_whenMemberDoesNotExist() {
         when(store.getMembership(1000)).thenReturn(null);
 
@@ -418,10 +499,32 @@ public class LibraryServiceTest {
     // ---------- lendBook ----------
 
     @Test
+    void lendBook_shouldThrow_whenMemberIdIsNotFourDigits() {
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.lendBook(999, "123456")
+        );
+
+        assertEquals("Member ID must be a 4-digit number.", ex.getMessage());
+        verify(store, never()).getMembership(anyInt());
+    }
+
+    @Test
+    void lendBook_shouldThrow_whenIsbnIsNotSixDigits() {
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.lendBook(1000, "12345")
+        );
+
+        assertEquals("ISBN must be exactly 6 digits.", ex.getMessage());
+        verify(store, never()).getMembership(anyInt());
+    }
+
+    @Test
     void lendBook_shouldReturnFalse_whenMemberNotFound() {
         when(store.getMembership(1000)).thenReturn(null);
 
-        boolean result = service.lendBook(1000, "123");
+        boolean result = service.lendBook(1000, "123456");
 
         assertFalse(result);
         verify(store, never()).addLoan(any());
@@ -432,9 +535,9 @@ public class LibraryServiceTest {
         Membership membership = new Membership(1000, "19900101-1234", 1, null, "ACTIVE", 0, 0);
 
         when(store.getMembership(1000)).thenReturn(membership);
-        when(store.getBookTitle("123")).thenReturn(null);
+        when(store.getBookTitle("123456")).thenReturn(null);
 
-        boolean result = service.lendBook(1000, "123");
+        boolean result = service.lendBook(1000, "123456");
 
         assertFalse(result);
         verify(store, never()).addLoan(any());
@@ -444,12 +547,12 @@ public class LibraryServiceTest {
     void lendBook_shouldReturnFalse_whenMemberIsSuspended() {
         Date tomorrow = new Date(System.currentTimeMillis() + 24L * 60 * 60 * 1000);
         Membership membership = new Membership(1000, "19900101-1234", 1, tomorrow, "SUSPENDED", 0, 1);
-        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
+        BookTitle title = new BookTitle("123456", "Java", "Author", 2020);
 
         when(store.getMembership(1000)).thenReturn(membership);
-        when(store.getBookTitle("123")).thenReturn(title);
+        when(store.getBookTitle("123456")).thenReturn(title);
 
-        boolean result = service.lendBook(1000, "123");
+        boolean result = service.lendBook(1000, "123456");
 
         assertFalse(result);
         verify(store, never()).addLoan(any());
@@ -458,17 +561,17 @@ public class LibraryServiceTest {
     @Test
     void lendBook_shouldReturnFalse_whenLoanLimitReached() {
         Membership membership = new Membership(1000, "19900101-1234", 1, null, "ACTIVE", 0, 0);
-        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
+        BookTitle title = new BookTitle("123456", "Java", "Author", 2020);
         MemberType type = new MemberType(1, "Student", 1);
         Loan activeLoan = mock(Loan.class);
 
         when(store.getMembership(1000)).thenReturn(membership);
-        when(store.getBookTitle("123")).thenReturn(title);
+        when(store.getBookTitle("123456")).thenReturn(title);
         when(store.getMemberType(1)).thenReturn(type);
         when(store.getLoansForMember(1000)).thenReturn(List.of(activeLoan));
         when(activeLoan.isActive()).thenReturn(true);
 
-        boolean result = service.lendBook(1000, "123");
+        boolean result = service.lendBook(1000, "123456");
 
         assertFalse(result);
         verify(store, never()).addLoan(any());
@@ -477,17 +580,17 @@ public class LibraryServiceTest {
     @Test
     void lendBook_shouldReturnFalse_whenActiveLoanAlreadyExists() {
         Membership membership = new Membership(1000, "19900101-1234", 1, null, "ACTIVE", 0, 0);
-        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
+        BookTitle title = new BookTitle("123456", "Java", "Author", 2020);
         MemberType type = new MemberType(1, "Student", 5);
         Loan existingLoan = mock(Loan.class);
 
         when(store.getMembership(1000)).thenReturn(membership);
-        when(store.getBookTitle("123")).thenReturn(title);
+        when(store.getBookTitle("123456")).thenReturn(title);
         when(store.getMemberType(1)).thenReturn(type);
         when(store.getLoansForMember(1000)).thenReturn(Collections.emptyList());
-        when(store.getActiveLoan(1000, "123")).thenReturn(existingLoan);
+        when(store.getActiveLoan(1000, "123456")).thenReturn(existingLoan);
 
-        boolean result = service.lendBook(1000, "123");
+        boolean result = service.lendBook(1000, "123456");
 
         assertFalse(result);
         verify(store, never()).addLoan(any());
@@ -496,17 +599,17 @@ public class LibraryServiceTest {
     @Test
     void lendBook_shouldReturnFalse_whenNoAvailableCopy() {
         Membership membership = new Membership(1000, "19900101-1234", 1, null, "ACTIVE", 0, 0);
-        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
+        BookTitle title = new BookTitle("123456", "Java", "Author", 2020);
         MemberType type = new MemberType(1, "Student", 5);
 
         when(store.getMembership(1000)).thenReturn(membership);
-        when(store.getBookTitle("123")).thenReturn(title);
+        when(store.getBookTitle("123456")).thenReturn(title);
         when(store.getMemberType(1)).thenReturn(type);
         when(store.getLoansForMember(1000)).thenReturn(Collections.emptyList());
-        when(store.getActiveLoan(1000, "123")).thenReturn(null);
-        when(store.getAvailableBookCopy("123")).thenReturn(null);
+        when(store.getActiveLoan(1000, "123456")).thenReturn(null);
+        when(store.getAvailableBookCopy("123456")).thenReturn(null);
 
-        boolean result = service.lendBook(1000, "123");
+        boolean result = service.lendBook(1000, "123456");
 
         assertFalse(result);
         verify(store, never()).addLoan(any());
@@ -515,18 +618,18 @@ public class LibraryServiceTest {
     @Test
     void lendBook_shouldCreateLoanAndUpdateCopy_whenValid() {
         Membership membership = new Membership(1000, "19900101-1234", 1, null, "ACTIVE", 0, 0);
-        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
+        BookTitle title = new BookTitle("123456", "Java", "Author", 2020);
         MemberType type = new MemberType(1, "Student", 5);
-        BookCopy copy = new BookCopy(7, "123", "AVAILABLE");
+        BookCopy copy = new BookCopy(7, "123456", "AVAILABLE");
 
         when(store.getMembership(1000)).thenReturn(membership);
-        when(store.getBookTitle("123")).thenReturn(title);
+        when(store.getBookTitle("123456")).thenReturn(title);
         when(store.getMemberType(1)).thenReturn(type);
         when(store.getLoansForMember(1000)).thenReturn(Collections.emptyList());
-        when(store.getActiveLoan(1000, "123")).thenReturn(null);
-        when(store.getAvailableBookCopy("123")).thenReturn(copy);
+        when(store.getActiveLoan(1000, "123456")).thenReturn(null);
+        when(store.getAvailableBookCopy("123456")).thenReturn(copy);
 
-        boolean result = service.lendBook(1000, "123");
+        boolean result = service.lendBook(1000, "123456");
 
         assertTrue(result);
         assertEquals("LOANED", copy.status);
@@ -547,10 +650,32 @@ public class LibraryServiceTest {
     // ---------- returnBook ----------
 
     @Test
+    void returnBook_shouldThrow_whenMemberIdIsNotFourDigits() {
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.returnBook(999, "123456")
+        );
+
+        assertEquals("Member ID must be a 4-digit number.", ex.getMessage());
+        verify(store, never()).getMembership(anyInt());
+    }
+
+    @Test
+    void returnBook_shouldThrow_whenIsbnIsNotSixDigits() {
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.returnBook(1000, "12345")
+        );
+
+        assertEquals("ISBN must be exactly 6 digits.", ex.getMessage());
+        verify(store, never()).getMembership(anyInt());
+    }
+
+    @Test
     void returnBook_shouldFail_whenMemberNotFound() {
         when(store.getMembership(1000)).thenReturn(null);
 
-        LibraryService.ReturnResult result = service.returnBook(1000, "123");
+        LibraryService.ReturnResult result = service.returnBook(1000, "123456");
 
         assertFalse(result.success);
         assertEquals("Member not found.", result.message);
@@ -561,9 +686,9 @@ public class LibraryServiceTest {
         Membership membership = new Membership(1000, "19900101-1234", 1, null, "ACTIVE", 0, 0);
 
         when(store.getMembership(1000)).thenReturn(membership);
-        when(store.getBookTitle("123")).thenReturn(null);
+        when(store.getBookTitle("123456")).thenReturn(null);
 
-        LibraryService.ReturnResult result = service.returnBook(1000, "123");
+        LibraryService.ReturnResult result = service.returnBook(1000, "123456");
 
         assertFalse(result.success);
         assertEquals("Book not found.", result.message);
@@ -572,13 +697,13 @@ public class LibraryServiceTest {
     @Test
     void returnBook_shouldFail_whenNoActiveLoanFound() {
         Membership membership = new Membership(1000, "19900101-1234", 1, null, "ACTIVE", 0, 0);
-        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
+        BookTitle title = new BookTitle("123456", "Java", "Author", 2020);
 
         when(store.getMembership(1000)).thenReturn(membership);
-        when(store.getBookTitle("123")).thenReturn(title);
-        when(store.getActiveLoan(1000, "123")).thenReturn(null);
+        when(store.getBookTitle("123456")).thenReturn(title);
+        when(store.getActiveLoan(1000, "123456")).thenReturn(null);
 
-        LibraryService.ReturnResult result = service.returnBook(1000, "123");
+        LibraryService.ReturnResult result = service.returnBook(1000, "123456");
 
         assertFalse(result.success);
         assertEquals("No active loan found.", result.message);
@@ -590,16 +715,16 @@ public class LibraryServiceTest {
         Date today = new Date();
         Date futureDue = new Date(today.getTime() + 24L * 60 * 60 * 1000);
 
-        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
+        BookTitle title = new BookTitle("123456", "Java", "Author", 2020);
         Loan loan = new Loan(1, 1000, 7, today, futureDue, null);
-        BookCopy copy = new BookCopy(7, "123", "LOANED");
+        BookCopy copy = new BookCopy(7, "123456", "LOANED");
 
         when(store.getMembership(1000)).thenReturn(membership);
-        when(store.getBookTitle("123")).thenReturn(title);
-        when(store.getActiveLoan(1000, "123")).thenReturn(loan);
-        when(store.getBookCopies("123")).thenReturn(List.of(copy));
+        when(store.getBookTitle("123456")).thenReturn(title);
+        when(store.getActiveLoan(1000, "123456")).thenReturn(loan);
+        when(store.getBookCopies("123456")).thenReturn(List.of(copy));
 
-        LibraryService.ReturnResult result = service.returnBook(1000, "123");
+        LibraryService.ReturnResult result = service.returnBook(1000, "123456");
 
         assertTrue(result.success);
         assertFalse(result.late);
@@ -618,16 +743,16 @@ public class LibraryServiceTest {
         Date oldDate = new Date(System.currentTimeMillis() - 10L * 24 * 60 * 60 * 1000);
         Date pastDue = new Date(System.currentTimeMillis() - 2L * 24 * 60 * 60 * 1000);
 
-        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
+        BookTitle title = new BookTitle("123456", "Java", "Author", 2020);
         Loan loan = new Loan(1, 1000, 7, oldDate, pastDue, null);
-        BookCopy copy = new BookCopy(7, "123", "LOANED");
+        BookCopy copy = new BookCopy(7, "123456", "LOANED");
 
         when(store.getMembership(1000)).thenReturn(membership);
-        when(store.getBookTitle("123")).thenReturn(title);
-        when(store.getActiveLoan(1000, "123")).thenReturn(loan);
-        when(store.getBookCopies("123")).thenReturn(List.of(copy));
+        when(store.getBookTitle("123456")).thenReturn(title);
+        when(store.getActiveLoan(1000, "123456")).thenReturn(loan);
+        when(store.getBookCopies("123456")).thenReturn(List.of(copy));
 
-        LibraryService.ReturnResult result = service.returnBook(1000, "123");
+        LibraryService.ReturnResult result = service.returnBook(1000, "123456");
 
         assertTrue(result.success);
         assertTrue(result.late);
@@ -647,16 +772,16 @@ public class LibraryServiceTest {
         Date oldDate = new Date(System.currentTimeMillis() - 10L * 24 * 60 * 60 * 1000);
         Date pastDue = new Date(System.currentTimeMillis() - 2L * 24 * 60 * 60 * 1000);
 
-        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
+        BookTitle title = new BookTitle("123456", "Java", "Author", 2020);
         Loan loan = new Loan(1, 1000, 7, oldDate, pastDue, null);
-        BookCopy copy = new BookCopy(7, "123", "LOANED");
+        BookCopy copy = new BookCopy(7, "123456", "LOANED");
 
         when(store.getMembership(1000)).thenReturn(membership);
-        when(store.getBookTitle("123")).thenReturn(title);
-        when(store.getActiveLoan(1000, "123")).thenReturn(loan);
-        when(store.getBookCopies("123")).thenReturn(List.of(copy));
+        when(store.getBookTitle("123456")).thenReturn(title);
+        when(store.getActiveLoan(1000, "123456")).thenReturn(loan);
+        when(store.getBookCopies("123456")).thenReturn(List.of(copy));
 
-        LibraryService.ReturnResult result = service.returnBook(1000, "123");
+        LibraryService.ReturnResult result = service.returnBook(1000, "123456");
 
         assertTrue(result.success);
         assertTrue(result.late);
@@ -680,14 +805,36 @@ public class LibraryServiceTest {
     // ---------- getters ----------
 
     @Test
-    void getBookTitle_shouldDelegateToStore() {
-        BookTitle title = new BookTitle("123", "Java", "Author", 2020);
-        when(store.getBookTitle("123")).thenReturn(title);
+    void getBookTitle_shouldThrow_whenIsbnIsNotSixDigits() {
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.getBookTitle("12345")
+        );
 
-        BookTitle result = service.getBookTitle("123");
+        assertEquals("ISBN must be exactly 6 digits.", ex.getMessage());
+        verify(store, never()).getBookTitle(anyString());
+    }
+
+    @Test
+    void getBookTitle_shouldDelegateToStore() {
+        BookTitle title = new BookTitle("123456", "Java", "Author", 2020);
+        when(store.getBookTitle("123456")).thenReturn(title);
+
+        BookTitle result = service.getBookTitle("123456");
 
         assertEquals(title, result);
-        verify(store).getBookTitle("123");
+        verify(store).getBookTitle("123456");
+    }
+
+    @Test
+    void getMembership_shouldThrow_whenMemberIdIsNotFourDigits() {
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.getMembership(999)
+        );
+
+        assertEquals("Member ID must be a 4-digit number.", ex.getMessage());
+        verify(store, never()).getMembership(anyInt());
     }
 
     @Test
@@ -699,6 +846,17 @@ public class LibraryServiceTest {
 
         assertEquals(membership, result);
         verify(store).getMembership(1000);
+    }
+
+    @Test
+    void getLoansForMember_shouldThrow_whenMemberIdIsNotFourDigits() {
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.getLoansForMember(999)
+        );
+
+        assertEquals("Member ID must be a 4-digit number.", ex.getMessage());
+        verify(store, never()).getLoansForMember(anyInt());
     }
 
     @Test

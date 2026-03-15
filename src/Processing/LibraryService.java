@@ -25,9 +25,9 @@ public class LibraryService implements ILibraryService {
 
     public void addBookTitle(String isbn, String title, String author, int publishYear, int copies) {
         logger.info("Add book title requested. isbn={}, title={}, copies={}", isbn, title, copies);
-        if (isbn == null || isbn.isBlank()) {
-            throw new IllegalArgumentException("ISBN is required.");
-        }
+
+        validateIsbn(isbn);
+
         if (title == null || title.isBlank()) {
             throw new IllegalArgumentException("Title is required.");
         }
@@ -48,6 +48,7 @@ public class LibraryService implements ILibraryService {
 
     public boolean deleteBookTitle(String isbn) {
         logger.info("Delete book title requested. isbn={}", isbn);
+        validateIsbn(isbn);
         BookTitle bookTitle = store.getBookTitle(isbn);
         if (bookTitle == null) {
             logger.warn("Delete book title denied: book not found. isbn={}", isbn);
@@ -106,6 +107,8 @@ public class LibraryService implements ILibraryService {
 
         int memberId = store.generateMemberId();
 
+        validateGeneratedMemberId(memberId);
+
         Membership membership = new Membership(
                 memberId,
                 personalNumber,
@@ -126,6 +129,8 @@ public class LibraryService implements ILibraryService {
 
     public boolean suspendMember(int memberId, int days) {
         logger.info("Suspend member requested. memberId={}, days={}", memberId, days);
+        validateMemberId(memberId);
+
         Membership membership = store.getMembership(memberId);
         if (membership == null || days <= 0) {
             logger.warn("Suspend member denied. memberId={}, days={}", memberId, days);
@@ -147,6 +152,8 @@ public class LibraryService implements ILibraryService {
 
     public boolean deleteMember(int memberId) {
         logger.info("Delete member requested. memberId={}", memberId);
+        validateMemberId(memberId);
+
         Membership membership = store.getMembership(memberId);
         if (membership == null) {
             logger.warn("Delete member denied: member not found. memberId={}", memberId);
@@ -168,6 +175,9 @@ public class LibraryService implements ILibraryService {
 
     public boolean lendBook(int memberId, String isbn) {
         logger.info("Lend request received. memberId={}, isbn={}", memberId, isbn);
+        validateMemberId(memberId);
+        validateIsbn(isbn);
+
         Membership membership = store.getMembership(memberId);
         if (membership == null) {
             logger.warn("Lend denied: member not found. memberId={}", memberId);
@@ -237,6 +247,9 @@ public class LibraryService implements ILibraryService {
 
     public ReturnResult returnBook(int memberId, String isbn) {
         logger.info("Return request received. memberId={}, isbn={}", memberId, isbn);
+        validateMemberId(memberId);
+        validateIsbn(isbn);
+
         Membership membership = store.getMembership(memberId);
         if (membership == null) {
             logger.warn("Return denied: member not found. memberId={}", memberId);
@@ -320,14 +333,17 @@ public class LibraryService implements ILibraryService {
     }
 
     public BookTitle getBookTitle(String isbn) {
+        validateIsbn(isbn);
         return store.getBookTitle(isbn);
     }
 
     public Membership getMembership(int memberId) {
+        validateMemberId(memberId);
         return store.getMembership(memberId);
     }
 
     public List<Loan> getLoansForMember(int memberId) {
+        validateMemberId(memberId);
         return store.getLoansForMember(memberId);
     }
 
@@ -349,6 +365,26 @@ public class LibraryService implements ILibraryService {
             this.suspendedUntil = suspendedUntil;
             this.memberDeleted = memberDeleted;
             this.message = message;
+        }
+    }
+    private void validateIsbn(String isbn) {
+        if (isbn == null || isbn.isBlank()) {
+            throw new IllegalArgumentException("ISBN is required.");
+        }
+        if (!isbn.matches("\\d{6}")) {
+            throw new IllegalArgumentException("ISBN must be exactly 6 digits.");
+        }
+    }
+
+    private void validateMemberId(int memberId) {
+        if (memberId < 1000 || memberId > 9999) {
+            throw new IllegalArgumentException("Member ID must be a 4-digit number.");
+        }
+    }
+
+    private void validateGeneratedMemberId(int memberId) {
+        if (memberId < 1000 || memberId > 9999) {
+            throw new IllegalStateException("Generated member ID must be a 4-digit number.");
         }
     }
 }
