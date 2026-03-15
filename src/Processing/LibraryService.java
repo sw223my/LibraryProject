@@ -8,6 +8,7 @@ import Objects.MemberType;
 import Objects.Membership;
 import Objects.Person;
 import Objects.Suspension;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -49,6 +50,7 @@ public class LibraryService implements ILibraryService {
     public boolean deleteBookTitle(String isbn) {
         logger.info("Delete book title requested. isbn={}", isbn);
         validateIsbn(isbn);
+
         BookTitle bookTitle = store.getBookTitle(isbn);
         if (bookTitle == null) {
             logger.warn("Delete book title denied: book not found. isbn={}", isbn);
@@ -106,7 +108,6 @@ public class LibraryService implements ILibraryService {
         }
 
         int memberId = store.generateMemberId();
-
         validateGeneratedMemberId(memberId);
 
         Membership membership = new Membership(
@@ -138,8 +139,9 @@ public class LibraryService implements ILibraryService {
         }
 
         Date today = new Date();
-        Date endDate = addDays(today, days);
+        updateMembershipStatus(membership, today);
 
+        Date endDate = addDays(today, days);
         membership.suspendedUntil = endDate;
         membership.status = "SUSPENDED";
         membership.suspensionCount++;
@@ -184,13 +186,17 @@ public class LibraryService implements ILibraryService {
             return false;
         }
 
+        Date today = new Date();
+        boolean statusChanged = updateMembershipStatus(membership, today);
+        if (statusChanged) {
+            store.updateMembership(membership);
+        }
+
         BookTitle bookTitle = store.getBookTitle(isbn);
         if (bookTitle == null) {
             logger.warn("Lend denied: book not found. isbn={}", isbn);
             return false;
         }
-
-        Date today = new Date();
 
         if (membership.isSuspended(today)) {
             logger.warn("Lend denied: member is suspended. memberId={}", memberId);
@@ -199,7 +205,8 @@ public class LibraryService implements ILibraryService {
 
         MemberType memberType = store.getMemberType(membership.memberTypeId);
         if (memberType == null) {
-            logger.error("Lend failed: member type not found. memberId={}, memberTypeId={}", memberId, membership.memberTypeId);
+            logger.error("Lend failed: member type not found. memberId={}, memberTypeId={}",
+                    memberId, membership.memberTypeId);
             return false;
         }
 
@@ -213,7 +220,8 @@ public class LibraryService implements ILibraryService {
         }
 
         if (activeLoans >= memberType.maxLoans) {
-            logger.warn("Lend denied: loan limit reached. memberId={}, activeLoans={}, maxLoans={}", memberId, activeLoans, memberType.maxLoans);
+            logger.warn("Lend denied: loan limit reached. memberId={}, activeLoans={}, maxLoans={}",
+                    memberId, activeLoans, memberType.maxLoans);
             return false;
         }
 
@@ -241,7 +249,8 @@ public class LibraryService implements ILibraryService {
         );
 
         store.addLoan(loan);
-        logger.info("Loan created successfully. memberId={}, isbn={}, copyId={}, loanId={}", memberId, isbn, copy.copyId, loan.loanId);
+        logger.info("Loan created successfully. memberId={}, isbn={}, copyId={}, loanId={}",
+                memberId, isbn, copy.copyId, loan.loanId);
         return true;
     }
 
@@ -256,6 +265,12 @@ public class LibraryService implements ILibraryService {
             return new ReturnResult(false, false, null, false, "Member not found.");
         }
 
+        Date today = new Date();
+        boolean statusChanged = updateMembershipStatus(membership, today);
+        if (statusChanged) {
+            store.updateMembership(membership);
+        }
+
         BookTitle bookTitle = store.getBookTitle(isbn);
         if (bookTitle == null) {
             logger.warn("Return denied: book not found. isbn={}", isbn);
@@ -268,7 +283,6 @@ public class LibraryService implements ILibraryService {
             return new ReturnResult(false, false, null, false, "No active loan found.");
         }
 
-        Date today = new Date();
         loan.returnDate = today;
         store.updateLoan(loan);
 
@@ -284,7 +298,8 @@ public class LibraryService implements ILibraryService {
             returnedCopy.status = "AVAILABLE";
             store.updateBookCopy(returnedCopy);
         } else {
-            logger.warn("Returned loan copy could not be found in catalog. loanId={}, copyId={}", loan.loanId, loan.copyId);
+            logger.warn("Returned loan copy could not be found in catalog. loanId={}, copyId={}",
+                    loan.loanId, loan.copyId);
         }
 
         boolean wasLate = today.after(loan.dueDate);
@@ -294,7 +309,8 @@ public class LibraryService implements ILibraryService {
         if (wasLate) {
             membership.lateReturnCount++;
 
-            logger.warn("Late return registered. memberId={}, isbn={}, lateReturnCount={}", memberId, isbn, membership.lateReturnCount);
+            logger.warn("Late return registered. memberId={}, isbn={}, lateReturnCount={}",
+                    memberId, isbn, membership.lateReturnCount);
 
             if (membership.lateReturnCount > 2) {
                 suspendedUntil = addDays(today, 15);
@@ -302,10 +318,9 @@ public class LibraryService implements ILibraryService {
                 membership.status = "SUSPENDED";
                 membership.suspensionCount++;
 
-                store.addSuspension(new Suspension(
-                        0, memberId, today, suspendedUntil
-                ));
-                logger.warn("Member suspended after repeated late returns. memberId={}, suspendedUntil={}", memberId, suspendedUntil);
+                store.addSuspension(new Suspension(0, memberId, today, suspendedUntil));
+                logger.warn("Member suspended after repeated late returns. memberId={}, suspendedUntil={}",
+                        memberId, suspendedUntil);
 
                 if (membership.suspensionCount > 2) {
                     store.blockPerson(membership.personalNumber);
@@ -318,13 +333,14 @@ public class LibraryService implements ILibraryService {
                     store.updateMembership(membership);
                 }
             } else {
-                // 1st or 2nd late return — persist the updated lateReturnCount
                 store.updateMembership(membership);
-                logger.info("Late return count updated in database. memberId={}, lateReturnCount={}", memberId, membership.lateReturnCount);
+                logger.info("Late return count updated in database. memberId={}, lateReturnCount={}",
+                        memberId, membership.lateReturnCount);
             }
         }
 
-        logger.info("Return completed. memberId={}, isbn={}, late={}, memberDeleted={}", memberId, isbn, wasLate, memberDeleted);
+        logger.info("Return completed. memberId={}, isbn={}, late={}, memberDeleted={}",
+                memberId, isbn, wasLate, memberDeleted);
         return new ReturnResult(true, wasLate, suspendedUntil, memberDeleted, "Return completed.");
     }
 
@@ -339,7 +355,14 @@ public class LibraryService implements ILibraryService {
 
     public Membership getMembership(int memberId) {
         validateMemberId(memberId);
-        return store.getMembership(memberId);
+
+        Membership membership = store.getMembership(memberId);
+        boolean statusChanged = updateMembershipStatus(membership, new Date());
+        if (statusChanged) {
+            store.updateMembership(membership);
+        }
+
+        return membership;
     }
 
     public List<Loan> getLoansForMember(int memberId) {
@@ -350,6 +373,34 @@ public class LibraryService implements ILibraryService {
     private Date addDays(Date date, int days) {
         long ms = days * 24L * 60 * 60 * 1000;
         return new Date(date.getTime() + ms);
+    }
+
+    private boolean updateMembershipStatus(Membership membership, Date today) {
+        if (membership == null) {
+            return false;
+        }
+
+        String oldStatus = membership.status;
+        Date oldSuspendedUntil = membership.suspendedUntil;
+
+        if (membership.suspendedUntil == null || !membership.suspendedUntil.after(today)) {
+            membership.suspendedUntil = null;
+            membership.status = "ACTIVE";
+        } else {
+            membership.status = "SUSPENDED";
+        }
+
+        boolean statusChanged =
+                (oldStatus == null && membership.status != null) ||
+                        (oldStatus != null && !oldStatus.equals(membership.status));
+
+        boolean dateChanged =
+                (oldSuspendedUntil == null && membership.suspendedUntil != null) ||
+                        (oldSuspendedUntil != null && membership.suspendedUntil == null) ||
+                        (oldSuspendedUntil != null && membership.suspendedUntil != null
+                                && !oldSuspendedUntil.equals(membership.suspendedUntil));
+
+        return statusChanged || dateChanged;
     }
 
     public static class ReturnResult {
@@ -367,6 +418,7 @@ public class LibraryService implements ILibraryService {
             this.message = message;
         }
     }
+
     private void validateIsbn(String isbn) {
         if (isbn == null || isbn.isBlank()) {
             throw new IllegalArgumentException("ISBN is required.");
