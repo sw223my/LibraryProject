@@ -39,7 +39,7 @@ public class LibraryServiceTest {
 
     private static final String PERSONAL_NUMBER = "20050713-1234";
     private static final String ISBN            = "123456";
-    private static final int    MEMBER_ID       = 3333;
+    private static final int    MEMBER_ID       = 1000;
 
     private Membership activeMembership;
     private BookTitle  bookTitle;
