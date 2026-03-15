@@ -90,17 +90,17 @@ public class LibraryService implements ILibraryService {
             throw new IllegalArgumentException("Invalid member type.");
         }
 
+        Person existingPerson = store.getPerson(personalNumber);
+        if (existingPerson != null && existingPerson.blocked) {
+            logger.warn("Registration denied: person is blocked. personalNumber={}", personalNumber);
+            throw new IllegalArgumentException("Registration not allowed due to previous violations.");
+        }
+
         Membership existingMembership = store.getMembershipByPersonalNumber(personalNumber);
         if (existingMembership != null) {
             logger.info("Register member skipped: existing membership found. personalNumber={}, memberId={}",
                     personalNumber, existingMembership.memberId);
             return String.valueOf(existingMembership.memberId);
-        }
-
-        Person existingPerson = store.getPerson(personalNumber);
-        if (existingPerson != null && existingPerson.blocked) {
-            logger.warn("Registration denied: person is blocked. personalNumber={}", personalNumber);
-            throw new IllegalArgumentException("Registration not allowed due to previous violations.");
         }
 
         if (existingPerson == null) {
@@ -170,8 +170,10 @@ public class LibraryService implements ILibraryService {
             }
         }
 
+        store.blockPerson(membership.personalNumber);
         store.removeMembership(memberId);
-        logger.info("Member deleted successfully. memberId={}", memberId);
+        logger.info("Member deleted and person blocked successfully. memberId={}, personalNumber={}",
+                memberId, membership.personalNumber);
         return true;
     }
 
@@ -357,6 +359,10 @@ public class LibraryService implements ILibraryService {
         validateMemberId(memberId);
 
         Membership membership = store.getMembership(memberId);
+        if (membership == null) {
+            return null;
+        }
+
         boolean statusChanged = updateMembershipStatus(membership, new Date());
         if (statusChanged) {
             store.updateMembership(membership);

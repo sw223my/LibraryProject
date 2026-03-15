@@ -52,6 +52,7 @@ public class Main {
                 case 2 -> handleReturnBook(scanner, svc);
                 case 3 -> manageLoans(scanner, svc, store);
                 case 4 -> manageMembers(scanner, svc);
+                case 5 -> manageBooks(scanner, svc);
                 case 0 -> done = true;
                 default -> System.out.println("Invalid menu choice.");
             }
@@ -68,6 +69,7 @@ public class Main {
         System.out.println("2. Return book");
         System.out.println("3. Manage loans");
         System.out.println("4. Manage members");
+        System.out.println("5. Manage books");
         System.out.println("0. Exit");
         System.out.print("Select: ");
     }
@@ -324,6 +326,73 @@ public class Main {
 
         boolean ok = svc.suspendMember(memberId, days);
         System.out.println(ok ? "Member suspended." : "Could not suspend member.");
+    }
+
+    private static void manageBooks(Scanner scanner, LibraryService svc) {
+        boolean back = false;
+
+        while (!back) {
+            System.out.println();
+            System.out.println("Manage books:");
+            System.out.println("1. Add book title");
+            System.out.println("2. Delete book title");
+            System.out.println("0. Back");
+            System.out.print("Select: ");
+
+            String input = scanner.nextLine();
+            int selection;
+
+            try {
+                selection = Integer.parseInt(input);
+            } catch (NumberFormatException e) {
+                System.out.println("Please enter a valid number.");
+                continue;
+            }
+
+            switch (selection) {
+                case 1 -> handleAddBookTitle(scanner, svc);
+                case 2 -> handleDeleteBookTitle(scanner, svc);
+                case 0 -> back = true;
+                default -> System.out.println("Invalid menu choice.");
+            }
+        }
+    }
+
+    private static void handleAddBookTitle(Scanner scanner, LibraryService svc) {
+        try {
+            System.out.print("Enter ISBN (6 digits): ");
+            String isbn = scanner.nextLine();
+
+            System.out.print("Enter title: ");
+            String title = scanner.nextLine();
+
+            System.out.print("Enter author: ");
+            String author = scanner.nextLine();
+
+            System.out.print("Enter publish year: ");
+            int year = Integer.parseInt(scanner.nextLine());
+
+            System.out.print("Enter number of copies: ");
+            int copies = Integer.parseInt(scanner.nextLine());
+
+            svc.addBookTitle(isbn, title, author, year, copies);
+            System.out.println("Book title added successfully.");
+            System.out.println("ISBN: " + isbn + " | " + title + " (" + copies + " cop" + (copies == 1 ? "y" : "ies") + ")");
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid number entered. Year and copies must be integers.");
+        } catch (IllegalArgumentException e) {
+            System.out.println("Could not add book: " + e.getMessage());
+        }
+    }
+
+    private static void handleDeleteBookTitle(Scanner scanner, LibraryService svc) {
+        System.out.print("Enter ISBN (6 digits): ");
+        String isbn = scanner.nextLine();
+
+        boolean ok = svc.deleteBookTitle(isbn);
+        System.out.println(ok
+                ? "Book title deleted."
+                : "Could not delete book. It may not exist or still has active loans.");
     }
 
     private static int readMemberId(Scanner scanner) {
