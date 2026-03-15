@@ -533,7 +533,7 @@ public class LibraryServiceTest {
     void lendBook_shouldThrow_whenIsbnIsNotSixDigits() {
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
-                () -> service.lendBook(1000, "123456")
+                () -> service.lendBook(1000, "12345")
         );
 
         assertEquals("ISBN must be exactly 6 digits.", ex.getMessage());
@@ -707,7 +707,7 @@ public class LibraryServiceTest {
     void returnBook_shouldThrow_whenIsbnIsNotSixDigits() {
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
-                () -> service.returnBook(1000, "123456")
+                () -> service.returnBook(1000, "12345")
         );
 
         assertEquals("ISBN must be exactly 6 digits.", ex.getMessage());
