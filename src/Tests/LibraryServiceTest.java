@@ -37,9 +37,9 @@ public class LibraryServiceTest {
 
     // ---------- Common fixtures ----------
 
-    private static final String PERSONAL_NUMBER = "19900101-1234";
+    private static final String PERSONAL_NUMBER = "20050713-1234";
     private static final String ISBN            = "123456";
-    private static final int    MEMBER_ID       = 1000;
+    private static final int    MEMBER_ID       = 3333;
 
     private Membership activeMembership;
     private BookTitle  bookTitle;
@@ -48,7 +48,7 @@ public class LibraryServiceTest {
     @BeforeEach
     void setUp() {
         activeMembership = new Membership(MEMBER_ID, PERSONAL_NUMBER, 1, null, "ACTIVE", 0, 0);
-        bookTitle        = new BookTitle(ISBN, "Java", "Author", 2020);
+        bookTitle        = new BookTitle(ISBN, "The Hobbit", "J. R. R. Tolkien", 1937);
         memberType       = new MemberType(1, "Undergraduate", 3);
     }
 
