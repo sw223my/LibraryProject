@@ -6,6 +6,7 @@ import Objects.BookCopy;
 import Objects.BookTitle;
 import Objects.Loan;
 import Objects.Membership;
+import Processing.ILibraryService;
 import Processing.LibraryService;
 
 import java.text.SimpleDateFormat;
@@ -14,7 +15,6 @@ import java.util.Scanner;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
-
 
 public class Main {
 
@@ -28,7 +28,8 @@ public class Main {
         String password = props.getProperty("db.password");
 
         ILibraryStore store = new DbLibraryStore(url, user, password);
-        LibraryService svc = new LibraryService(store);
+        ILibraryService svc = new LibraryService(store);
+
         Scanner scanner = new Scanner(System.in);
 
         System.out.println("Welcome to the Library Lending Management System");
@@ -74,7 +75,7 @@ public class Main {
         System.out.print("Select: ");
     }
 
-    private static void manageLoans(Scanner scanner, LibraryService svc, ILibraryStore store) {
+    private static void manageLoans(Scanner scanner, ILibraryService svc, ILibraryStore store) {
         boolean back = false;
 
         while (!back) {
@@ -104,7 +105,7 @@ public class Main {
         }
     }
 
-    private static void manageMembers(Scanner scanner, LibraryService svc) {
+    private static void manageMembers(Scanner scanner, ILibraryService svc) {
         boolean back = false;
 
         while (!back) {
@@ -136,7 +137,7 @@ public class Main {
         }
     }
 
-    private static void handleLendBook(Scanner scanner, LibraryService svc) {
+    private static void handleLendBook(Scanner scanner, ILibraryService svc) {
         int memberId = readMemberId(scanner);
         if (memberId < 0) {
             return;
@@ -178,7 +179,7 @@ public class Main {
         }
     }
 
-    private static void handleReturnBook(Scanner scanner, LibraryService svc) {
+    private static void handleReturnBook(Scanner scanner, ILibraryService svc) {
         int memberId = readMemberId(scanner);
         if (memberId < 0) {
             return;
@@ -188,6 +189,11 @@ public class Main {
         String isbn = scanner.nextLine();
 
         LibraryService.ReturnResult result = svc.returnBook(memberId, isbn);
+
+        if (result == null) {
+            System.out.println("Could not return book.");
+            return;
+        }
 
         if (!result.success) {
             System.out.println(result.message);
@@ -211,7 +217,7 @@ public class Main {
         }
     }
 
-    private static void handleShowLoans(Scanner scanner, LibraryService svc, ILibraryStore store) {
+    private static void handleShowLoans(Scanner scanner, ILibraryService svc, ILibraryStore store) {
         int memberId = readMemberId(scanner);
         if (memberId < 0) {
             return;
@@ -234,7 +240,7 @@ public class Main {
 
         for (Loan loan : loans) {
             String isbn = findIsbnForCopy(store, loan.copyId);
-            BookTitle book = isbn == null ? null : svc.getBookTitle(isbn);
+            BookTitle book = (isbn == null) ? null : svc.getBookTitle(isbn);
             String title = (book == null) ? "Unknown title" : book.title;
 
             System.out.println("---------------------------------");
@@ -251,7 +257,7 @@ public class Main {
         }
     }
 
-    private static void handleCheckBook(Scanner scanner, LibraryService svc, ILibraryStore store) {
+    private static void handleCheckBook(Scanner scanner, ILibraryService svc, ILibraryStore store) {
         System.out.print("Enter book ISBN: ");
         String isbn = scanner.nextLine();
 
@@ -273,7 +279,7 @@ public class Main {
         System.out.println("Status: " + (availableCopies > 0 ? "Available" : "Not available"));
     }
 
-    private static void handleRegisterMember(Scanner scanner, LibraryService svc) {
+    private static void handleRegisterMember(Scanner scanner, ILibraryService svc) {
         try {
             System.out.print("Enter first name: ");
             String firstName = scanner.nextLine();
@@ -297,7 +303,7 @@ public class Main {
         }
     }
 
-    private static void handleDeleteMember(Scanner scanner, LibraryService svc) {
+    private static void handleDeleteMember(Scanner scanner, ILibraryService svc) {
         int memberId = readMemberId(scanner);
         if (memberId < 0) {
             return;
@@ -309,7 +315,7 @@ public class Main {
                 : "Could not delete member. Member may not exist or still has active loans.");
     }
 
-    private static void handleSuspendMember(Scanner scanner, LibraryService svc) {
+    private static void handleSuspendMember(Scanner scanner, ILibraryService svc) {
         int memberId = readMemberId(scanner);
         if (memberId < 0) {
             return;
@@ -328,7 +334,7 @@ public class Main {
         System.out.println(ok ? "Member suspended." : "Could not suspend member.");
     }
 
-    private static void manageBooks(Scanner scanner, LibraryService svc) {
+    private static void manageBooks(Scanner scanner, ILibraryService svc) {
         boolean back = false;
 
         while (!back) {
@@ -358,7 +364,7 @@ public class Main {
         }
     }
 
-    private static void handleAddBookTitle(Scanner scanner, LibraryService svc) {
+    private static void handleAddBookTitle(Scanner scanner, ILibraryService svc) {
         try {
             System.out.print("Enter ISBN (6 digits): ");
             String isbn = scanner.nextLine();
@@ -385,7 +391,7 @@ public class Main {
         }
     }
 
-    private static void handleDeleteBookTitle(Scanner scanner, LibraryService svc) {
+    private static void handleDeleteBookTitle(Scanner scanner, ILibraryService svc) {
         System.out.print("Enter ISBN (6 digits): ");
         String isbn = scanner.nextLine();
 
@@ -416,7 +422,7 @@ public class Main {
         try (FileInputStream fis = new FileInputStream("db.properties")) {
             props.load(fis);
         } catch (IOException e) {
-            throw new RuntimeException("Kunde inte läsa db.properties", e);
+            throw new RuntimeException("Could not read db.properties", e);
         }
 
         return props;
