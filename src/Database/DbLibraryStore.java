@@ -525,20 +525,23 @@ public class DbLibraryStore implements ILibraryStore {
         }
     }
 
-    @Override
     public void removeMembership(int memberId) {
-        logger.info("Removing membership. memberId={}", memberId);
-
-        String sql = """
-            DELETE FROM membership
-            WHERE member_id = ?
-            """;
-
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, memberId);
-            stmt.executeUpdate();
+        try (Connection conn = getConnection()) {
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "DELETE FROM suspension WHERE member_id = ?")) {
+                stmt.setInt(1, memberId);
+                stmt.executeUpdate();
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "DELETE FROM loan WHERE member_id = ?")) {
+                stmt.setInt(1, memberId);
+                stmt.executeUpdate();
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "DELETE FROM membership WHERE member_id = ?")) {
+                stmt.setInt(1, memberId);
+                stmt.executeUpdate();
+            }
         } catch (SQLException e) {
             logger.error("Could not remove membership.", e);
             throw new RuntimeException("Could not remove membership.", e);
