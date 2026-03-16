@@ -64,11 +64,11 @@
     <orderEntry type="module-library">
       <library>
         <CLASSES>
-          <root url="file://$MODULE_DIR$/../Project" />
+          <root url="file://$MODULE_DIR$" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
-        <jarDirectory url="file://$MODULE_DIR$/../Project" recursive="false" />
+        <jarDirectory url="file://$MODULE_DIR$" recursive="false" />
       </library>
     </orderEntry>
     <orderEntry type="module-library">
@@ -81,5 +81,7 @@
       </library>
     </orderEntry>
     <orderEntry type="library" exported="" name="mockito-junit-jupiter-5.23.0" level="project" />
+    <orderEntry type="library" name="mockito.junit.jupiter" level="project" />
+    <orderEntry type="library" name="mockito.core" level="project" />
   </component>
 </module>
