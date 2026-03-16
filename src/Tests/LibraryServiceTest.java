@@ -58,7 +58,7 @@ public class LibraryServiceTest {
     void addBookTitle_shouldThrow_whenIsbnIsBlank() {
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
-                () -> service.addBookTitle(" ", "Title", "Author", 2020, 1)
+                () -> service.addBookTitle(" ", "Title", "Author", 2026, 1)
         );
 
         assertEquals("ISBN is required.", ex.getMessage());
@@ -70,7 +70,7 @@ public class LibraryServiceTest {
     void addBookTitle_shouldThrow_whenIsbnNotSixDigits() {
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
-                () -> service.addBookTitle("12345", "Title", "Author", 2020, 1)
+                () -> service.addBookTitle("12345", "Title", "Author", 2026, 1)
         );
 
         assertEquals("ISBN must be exactly 6 digits.", ex.getMessage());
@@ -83,7 +83,7 @@ public class LibraryServiceTest {
     void addBookTitle_shouldThrow_whenIsbnContainsLetters() {
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
-                () -> service.addBookTitle("12A456", "Title", "Author", 2020, 1)
+                () -> service.addBookTitle("12A456", "Title", "Author", 2026, 1)
         );
 
         assertEquals("ISBN must be exactly 6 digits.", ex.getMessage());
@@ -96,7 +96,7 @@ public class LibraryServiceTest {
     void addBookTitle_shouldThrow_whenTitleIsBlank() {
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
-                () -> service.addBookTitle("123456", " ", "Author", 2020, 1)
+                () -> service.addBookTitle("123456", " ", "Author", 2026, 1)
         );
 
         assertEquals("Title is required.", ex.getMessage());
@@ -108,7 +108,7 @@ public class LibraryServiceTest {
     void addBookTitle_shouldThrow_whenCopiesInvalid() {
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
-                () -> service.addBookTitle("123456", "Title", "Author", 2020, 0)
+                () -> service.addBookTitle("123456", "Title", "Author", 2026, 0)
         );
 
         assertEquals("Copies must be at least 1.", ex.getMessage());
@@ -119,7 +119,7 @@ public class LibraryServiceTest {
     @Test
     void addBookTitle_shouldThrow_whenBookTitleAlreadyExists() {
         when(store.getBookTitle("123456"))
-                .thenReturn(new BookTitle("123456", "Old", "Author", 2020));
+                .thenReturn(new BookTitle("123456", "Old", "Author", 2026));
 
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
